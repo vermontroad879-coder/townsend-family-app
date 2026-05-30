@@ -67,8 +67,8 @@ input:focus,textarea:focus,select:focus{outline:none;}
   window.__fbReady=true;
 </script>
 <!-- Babel for JSX -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-<script type="text/babel" data-presets="react">
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel" data-presets="env,react">
 const{useState,useEffect}=React;
 function getCurrentDay(){return["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];}
 function uid(){return Math.random().toString(36).slice(2,9);}
