@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Quest Board"/>
-<title>Townsend Family Quest Board v2</title>
+<title>Townsend Family Quest Board</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;padding:0;background:#0F0F1A;font-family:Georgia,'Times New Roman',serif;}
@@ -22,17 +22,28 @@ input:focus,textarea:focus,select:focus{outline:none;}
 </head>
 <body>
 <div id="root"></div>
+<!-- React -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-<script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getDatabase,ref,onValue,set,push}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-const cfg={apiKey:"AIzaSyAgdfWcHOmUwfyj7i4Q-AW0EYBec-XY1aI",authDomain:"the-townsend-app.firebaseapp.com",databaseURL:"https://the-townsend-app-default-rtdb.firebaseio.com",projectId:"the-townsend-app",storageBucket:"the-townsend-app.firebasestorage.app",messagingSenderId:"586695629109",appId:"1:586695629109:web:010703c7c044607e0fd47c"};
-const app=initializeApp(cfg);const db=getDatabase(app);
-window.__db=db;window.__ref=ref;window.__set=set;window.__push=push;window.__onValue=onValue;
-window.__fbReady=true;window.dispatchEvent(new Event("fbReady"));
+<!-- Firebase compat (no ES modules - avoids race condition with Babel) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+  var cfg={apiKey:"AIzaSyAgdfWcHOmUwfyj7i4Q-AW0EYBec-XY1aI",authDomain:"the-townsend-app.firebaseapp.com",databaseURL:"https://the-townsend-app-default-rtdb.firebaseio.com",projectId:"the-townsend-app",storageBucket:"the-townsend-app.firebasestorage.app",messagingSenderId:"586695629109",appId:"1:586695629109:web:010703c7c044607e0fd47c"};
+  firebase.initializeApp(cfg);
+  var _db=firebase.database();
+  window.__db=_db;
+  window.__ref=function(db,path){return db.ref(path);};
+  window.__set=function(r,v){return r.set(v);};
+  window.__push=function(r,v){return r.push(v);};
+  window.__onValue=function(r,cb,opts){
+    if(opts&&opts.onlyOnce){r.once("value",function(s){cb(s);});}
+    else{r.on("value",function(s){cb(s);});return function(){r.off("value");};}
+  };
+  window.__fbReady=true;
 </script>
+<!-- Babel for JSX -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script type="text/babel">
 const{useState,useEffect}=React;
 function getCurrentDay(){return["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];}
@@ -314,17 +325,26 @@ function App(){
         done();
       }),
     ];
-    return()=>unsubs.forEach(u=>u());
+    // store refs for cleanup
+    const dbRefs=[
+      ref(db,"parentPin"),ref(db,"dynamicQuests"),ref(db,"checks"),
+      ref(db,"sideChecks"),ref(db,"pending"),ref(db,"activity"),
+      ref(db,"approved"),ref(db,"redeemed"),ref(db,"posts"),
+      ref(db,"messages"),ref(db,"events")
+    ];
+    return()=>dbRefs.forEach(r=>r.off("value"));
   },[fbReady]);
 
-  const logActivity=(text,icon="📋")=>{
-    const{__db:db,__ref:ref,__push:push,__onValue:onVal,__set:set}=window;
-    push(ref(db,"activity"),{text,icon,ts:Date.now(),time:"just now"});
-    onVal(ref(db,"activity"),s=>{
+  const logActivity=(text,icon)=>{
+    const ic=icon||"📋";
+    const{__db:db,__ref:ref,__push:push,__set:set}=window;
+    push(ref(db,"activity"),{text,icon:ic,ts:Date.now(),time:"just now"});
+    // trim to 15 after push
+    ref(db,"activity").once("value",function(s){
       const v=s.val();if(!v)return;
       const e=Object.entries(v).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
       if(e.length>15)e.slice(15).forEach(([k])=>set(ref(db,"activity/"+k),null));
-    },{onlyOnce:true});
+    });
   };
 
   const openParentMode=()=>{
