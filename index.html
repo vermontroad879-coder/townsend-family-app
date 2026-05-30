@@ -9,138 +9,115 @@
 <meta name="apple-mobile-web-app-title" content="Quest Board"/>
 <title>Townsend Family Quest Board</title>
 <style>
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  body{margin:0;padding:0;background:#0F0F1A;font-family:Georgia,'Times New Roman',serif;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-  .fade-in{animation:fadeIn 0.2s ease;}
-  ::-webkit-scrollbar{width:4px;height:4px;}
-  ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:#312E81;border-radius:4px;}
-  table{border-collapse:collapse;}
-  input,textarea,select,button{font-family:Georgia,'Times New Roman',serif;}
-  textarea{resize:none;}
-  input:focus,textarea:focus{outline:none;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;padding:0;background:#0F0F1A;font-family:Georgia,'Times New Roman',serif;}
+@keyframes spin{to{transform:rotate(360deg);}}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:#312E81;border-radius:4px;}
+table{border-collapse:collapse;}
+input,textarea,select,button{font-family:Georgia,'Times New Roman',serif;}
+textarea{resize:none;}
+input:focus,textarea:focus,select:focus{outline:none;}
 </style>
 </head>
 <body>
 <div id="root"></div>
-
-<!-- React & Babel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-
-<!-- Firebase -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyAgdfWcHOmUwfyj7i4Q-AW0EYBec-XY1aI",
-    authDomain: "the-townsend-app.firebaseapp.com",
-    databaseURL: "https://the-townsend-app-default-rtdb.firebaseio.com",
-    projectId: "the-townsend-app",
-    storageBucket: "the-townsend-app.firebasestorage.app",
-    messagingSenderId: "586695629109",
-    appId: "1:586695629109:web:010703c7c044607e0fd47c"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db  = getDatabase(app);
-  window.__db  = db;
-  window.__ref = ref;
-  window.__set = set;
-  window.__push = push;
-  window.__onValue = onValue;
-  window.__fbReady = true;
-  window.dispatchEvent(new Event("fbReady"));
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getDatabase,ref,onValue,set,push}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const cfg={apiKey:"AIzaSyAgdfWcHOmUwfyj7i4Q-AW0EYBec-XY1aI",authDomain:"the-townsend-app.firebaseapp.com",databaseURL:"https://the-townsend-app-default-rtdb.firebaseio.com",projectId:"the-townsend-app",storageBucket:"the-townsend-app.firebasestorage.app",messagingSenderId:"586695629109",appId:"1:586695629109:web:010703c7c044607e0fd47c"};
+const app=initializeApp(cfg);const db=getDatabase(app);
+window.__db=db;window.__ref=ref;window.__set=set;window.__push=push;window.__onValue=onValue;
+window.__fbReady=true;window.dispatchEvent(new Event("fbReady"));
 </script>
-
 <script type="text/babel">
-const { useState, useEffect, useCallback } = React;
+const{useState,useEffect}=React;
+function getCurrentDay(){return["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];}
+function uid(){return Math.random().toString(36).slice(2,9);}
 
-// ── DATA ──────────────────────────────────────────────────────
-const KIDS = [
-  { id:"jude",  name:"Jude",  emoji:"⚔️",  avatar:"🧑", color:"#6366F1", bg:"#EEF2FF", border:"#A5B4FC", level:"Knight",
-    quests:[
-      {id:"j1",label:"Daily Trash Duty",    desc:"Empty all household bins",       pts:1,icon:"🗑️"},
-      {id:"j2",label:"Monday Night Special", desc:"Take bins to curb (Mon only)",   pts:1,icon:"🌙"},
-      {id:"j3",label:"Dishes Rotation",      desc:"Wash & load dishwasher",         pts:1,icon:"🍽️"},
-      {id:"j4",label:"Daily Room Tidying",   desc:"Tidy bedroom to standard",       pts:1,icon:"🛏️"},
-    ]},
-  { id:"blake", name:"Blake", emoji:"🛡️", avatar:"👦", color:"#10B981", bg:"#ECFDF5", border:"#6EE7B7", level:"Ranger",
-    quests:[
-      {id:"b1",label:"Daily Recycling Duty", desc:"Collect & sort all recycling",   pts:1,icon:"♻️"},
-      {id:"b2",label:"Sunday Night Special",  desc:"Take recycling to curb (Sun)",  pts:1,icon:"🌙"},
-      {id:"b3",label:"Dishes Rotation",       desc:"Wash & load dishwasher",         pts:1,icon:"🍽️"},
-      {id:"b4",label:"Daily Room Tidying",    desc:"Tidy bedroom to standard",       pts:1,icon:"🛏️"},
-    ]},
-  { id:"avery", name:"Avery", emoji:"🔮", avatar:"👧", color:"#F59E0B", bg:"#FFFBEB", border:"#FCD34D", level:"Mage",
-    quests:[
-      {id:"a1",label:"Kitchen Assist",     desc:"Dry & put away dishes after Jude", pts:1,icon:"🧽"},
-      {id:"a2",label:"Daily Room Tidying", desc:"Tidy bedroom to standard",          pts:1,icon:"🛏️"},
-    ]},
-  { id:"ellie", name:"Ellie", emoji:"🌟", avatar:"🧒", color:"#EC4899", bg:"#FDF2F8", border:"#F9A8D4", level:"Scout",
-    quests:[
-      {id:"e1",label:"Daily Room Tidying", desc:"Tidy bedroom to standard",          pts:1,icon:"🛏️"},
-    ]},
+const KIDS=[
+  {id:"jude", name:"Jude", emoji:"⚔️", avatar:"🧑",color:"#6366F1",bg:"#EEF2FF",border:"#A5B4FC",level:"Knight"},
+  {id:"blake",name:"Blake",emoji:"🛡️",avatar:"👦",color:"#10B981",bg:"#ECFDF5",border:"#6EE7B7",level:"Ranger"},
+  {id:"avery",name:"Avery",emoji:"🔮",avatar:"👧",color:"#F59E0B",bg:"#FFFBEB",border:"#FCD34D",level:"Mage"},
+  {id:"ellie",name:"Ellie",emoji:"🌟",avatar:"🧒",color:"#EC4899",bg:"#FDF2F8",border:"#F9A8D4",level:"Scout"},
 ];
 
-const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const DEFAULT_QUESTS={
+  jude:[
+    {id:"j1",label:"Daily Trash Duty",   desc:"Empty all household bins",      pts:1,icon:"🗑️"},
+    {id:"j2",label:"Monday Night Special",desc:"Take bins to curb (Mon only)",  pts:1,icon:"🌙"},
+    {id:"j3",label:"Dishes Rotation",     desc:"Wash and load dishwasher",      pts:1,icon:"🍽️"},
+    {id:"j4",label:"Daily Room Tidying",  desc:"Tidy bedroom to standard",      pts:1,icon:"🛏️"},
+  ],
+  blake:[
+    {id:"b1",label:"Daily Recycling Duty",desc:"Collect and sort all recycling",pts:1,icon:"♻️"},
+    {id:"b2",label:"Sunday Night Special", desc:"Take recycling to curb (Sun)", pts:1,icon:"🌙"},
+    {id:"b3",label:"Dishes Rotation",      desc:"Wash and load dishwasher",     pts:1,icon:"🍽️"},
+    {id:"b4",label:"Daily Room Tidying",   desc:"Tidy bedroom to standard",     pts:1,icon:"🛏️"},
+  ],
+  avery:[
+    {id:"a1",label:"Kitchen Assist",    desc:"Dry and put away dishes after Jude",pts:1,icon:"🧽"},
+    {id:"a2",label:"Daily Room Tidying",desc:"Tidy bedroom to standard",          pts:1,icon:"🛏️"},
+  ],
+  ellie:[
+    {id:"e1",label:"Daily Room Tidying",desc:"Tidy bedroom to standard",pts:1,icon:"🛏️"},
+  ],
+};
 
-const GOLDEN_RULES = [
-  {id:"gr1",label:"Clean As You Go",   desc:"Grab what you pass, put it away",                      pts:0.5},
-  {id:"gr2",label:"Common Area Reset", desc:"Clean up after yourself in Living Room, Bath, Kitchen", pts:0.5},
+const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const GOLDEN_RULES=[
+  {id:"gr1",label:"Clean As You Go",  desc:"Grab what you pass, put it away",                     pts:0.5},
+  {id:"gr2",label:"Common Area Reset",desc:"Clean up after yourself in Living Room, Bath, Kitchen",pts:0.5},
 ];
+const FV_ID="fv",ET_ID="et";
 
-const FV_ID = "fv", ET_ID = "et";
-
-const SIDE_QUESTS = [
-  {cat:"Support Class",    color:"#6366F1",icon:"🤝",pts:1,   quests:[
+const SIDE_QUESTS=[
+  {cat:"Support Class",   color:"#6366F1",icon:"🤝",pts:1,  quests:[
     {id:"sq1",label:"Chore Swap",            desc:"Do someone else's assigned chore"},
     {id:"sq2",label:"The Helping Hand",      desc:"Help a family member unprompted"},
     {id:"sq3",label:"Random Act of Kindness",desc:"Do something kind for anyone"},
   ]},
-  {cat:"Recharge Station", color:"#10B981",icon:"🔋",pts:1.5, quests:[
+  {cat:"Recharge Station",color:"#10B981",icon:"🔋",pts:1.5,quests:[
     {id:"sq4",label:"Unplugged",  desc:"1 hour screen-free"},
     {id:"sq5",label:"Fresh Air",  desc:"30 mins outside"},
     {id:"sq6",label:"Body & Mind",desc:"Exercise or deep breathing"},
     {id:"sq7",label:"The Reader", desc:"30 mins reading"},
   ]},
-  {cat:"Explorer Guild",   color:"#F59E0B",icon:"🗺️",pts:1,  quests:[
+  {cat:"Explorer Guild",  color:"#F59E0B",icon:"🗺️",pts:1,  quests:[
     {id:"sq8",label:"Brain Forge",    desc:"Research a new hobby and tell parents"},
     {id:"sq9",label:"The Maker Space",desc:"Drawing, coloring, writing, or art"},
   ]},
-  {cat:"Self-Care Mastery",color:"#EC4899",icon:"✨",pts:1,note:"Parent evidence required!", quests:[
+  {cat:"Self-Care Mastery",color:"#EC4899",icon:"✨",pts:1,note:"Parent evidence required!",quests:[
     {id:"sq10",label:"2-Min Brush",desc:"Brush teeth for 2 full minutes"},
     {id:"sq11",label:"Shower/Bath",desc:"Full shower or bath"},
     {id:"sq12",label:"Nail Check", desc:"Clipping nails"},
     {id:"sq13",label:"Deodorant",  desc:"Apply deodorant"},
   ]},
-  {cat:"Lightning Reflexes",color:"#EF4444",icon:"⚡",pts:1, quests:[
+  {cat:"Lightning Reflexes",color:"#EF4444",icon:"⚡",pts:1,quests:[
     {id:"sq14",label:"Quick Response",desc:"Reply to Mom/Dad within 5 minutes"},
   ]},
 ];
 
-const PAID_REWARDS = [
-  {id:"r1",tier:"Grand Prize",label:"Xbox Game / Add-On", sub:"100% Core Chores completed",pts:100,icon:"🎮",color:"#6366F1"},
-  {id:"r2",tier:"Mid Prize",  label:"Amazon Item ≤ $10",  sub:"75% Core Chores completed", pts:70, icon:"📦",color:"#10B981"},
-  {id:"r3",tier:"Base Prize", label:"$5 Cash",            sub:"50% Core Chores completed", pts:40, icon:"💵",color:"#F59E0B"},
+const PAID_REWARDS=[
+  {id:"r1",tier:"Grand Prize",label:"Xbox Game / Add-On",sub:"100% Core Chores completed",icon:"🎮",color:"#6366F1",pctReq:100},
+  {id:"r2",tier:"Mid Prize",  label:"Amazon Item up to $10",sub:"75% Core Chores completed",icon:"📦",color:"#10B981",pctReq:75},
+  {id:"r3",tier:"Base Prize", label:"$5 Cash",           sub:"50% Core Chores completed",icon:"💵",color:"#F59E0B",pctReq:50},
 ];
-
-const FREE_REWARDS = [
-  {id:"r4",tier:"Screen Lord",    label:"Extra Xbox Time",          sub:"+1 hour gaming session",               pts:25, icon:"🎮",color:"#6366F1"},
-  {id:"r5",tier:"The Director",   label:"Pick Tonight's Movie/Show",sub:"Choose the living room TV tonight",    pts:20, icon:"🎬",color:"#EC4899"},
-  {id:"r6",tier:"Free Pass",      label:"Skip One Chore",           sub:"Skip any 1 chore next week",           pts:30, icon:"🎟️",color:"#10B981"},
-  {id:"r7",tier:"Sugar Rush",     label:"Fave Snack, Sweet or Drink",sub:"Pick any treat — candy, soda, or snack",pts:20,icon:"🍬",color:"#F472B6"},
-  {id:"r8",tier:"Sleep In",       label:"30 Min Extra Sleep",       sub:"Later bedtime tonight",                pts:20, icon:"🌙",color:"#8B5CF6"},
-  {id:"r9",tier:"🏆 LEGEND WEEK",label:"Chore-Free Week!",
+const FREE_REWARDS=[
+  {id:"r4",tier:"Screen Lord",    label:"Extra Xbox Time",          sub:"+1 hour gaming session",              pts:25,icon:"🎮",color:"#6366F1"},
+  {id:"r5",tier:"The Director",   label:"Pick Tonight Movie or Show",sub:"Choose the living room TV tonight",  pts:20,icon:"🎬",color:"#EC4899"},
+  {id:"r6",tier:"Free Pass",      label:"Skip One Chore",           sub:"Skip any 1 chore next week",          pts:30,icon:"🎟️",color:"#10B981"},
+  {id:"r7",tier:"Sugar Rush",     label:"Fave Snack Sweet or Drink", sub:"Pick any treat - candy, soda, snack",pts:20,icon:"🍬",color:"#F472B6"},
+  {id:"r8",tier:"Sleep In",       label:"30 Min Extra Sleep",        sub:"Later bedtime tonight",              pts:20,icon:"🌙",color:"#8B5CF6"},
+  {id:"r9",tier:"LEGEND WEEK",    label:"Chore-Free Week!",
    sub:"100% chores + daily goal every day = week off (still 5 side quests + daily goal)",
    pts:999,icon:"👑",color:"#F59E0B",isLegend:true},
 ];
 
-const PHOTOS = [
+const PHOTOS=[
   {id:1,emoji:"🏖️",label:"Beach Trip", author:"Dad",  bg:"linear-gradient(135deg,#667eea,#764ba2)"},
   {id:2,emoji:"🎂",label:"Birthday",   author:"Mom",  bg:"linear-gradient(135deg,#f093fb,#f5576c)"},
   {id:3,emoji:"⛺",label:"Camping",    author:"Blake",bg:"linear-gradient(135deg,#4facfe,#00f2fe)"},
@@ -149,12 +126,35 @@ const PHOTOS = [
   {id:6,emoji:"🏕️",label:"Fall Hike", author:"Dad",  bg:"linear-gradient(135deg,#a18cd1,#fbc2eb)"},
 ];
 
-// ── HELPERS ───────────────────────────────────────────────────
-function blankChecks(){
+const EMOJIS=["🗑️","🌙","🍽️","🛏️","♻️","🧽","🧹","🪣","🚿","🪟","🌿","🛒","🐾","🐕","📬","🥦","🍎","⭐","🏠","📚","🎨","💪","🧺","👕","🏃"];
+
+function getQ(dq,kid){return dq[kid]||[];}
+function calcPts(kid,checks,side,dq){
+  let p=0;
+  if(!checks[kid])return 0;
+  getQ(dq,kid).forEach(q=>DAYS.forEach(d=>{if(checks[kid]?.[q.id]?.[d])p+=Number(q.pts||1);}));
+  GOLDEN_RULES.forEach(r=>DAYS.forEach(d=>{if(checks[kid]?.[r.id]?.[d])p+=r.pts;}));
+  DAYS.forEach(d=>{if(checks[kid]?.[kid==="ellie"?ET_ID:FV_ID]?.[d])p+=0.5;});
+  SIDE_QUESTS.forEach(c=>c.quests.forEach(q=>{if(side[kid]?.[q.id])p+=c.pts;}));
+  return Math.round(p*10)/10;
+}
+function corePct(kid,checks,dq){
+  const qs=getQ(dq,kid);if(!qs.length||!checks[kid])return 0;
+  let t=0,d=0;
+  qs.forEach(q=>DAYS.forEach(day=>{t++;if(checks[kid]?.[q.id]?.[day])d++;}));
+  return t===0?0:Math.round(d/t*100);
+}
+function trackDays(kid,checks){
+  return DAYS.filter(d=>checks[kid]?.[kid==="ellie"?ET_ID:FV_ID]?.[d]).length;
+}
+function sideCount(kid,side){let n=0;SIDE_QUESTS.forEach(c=>c.quests.forEach(q=>{if(side[kid]?.[q.id])n++;}));return n;}
+function legendEarned(kid,checks,dq){return corePct(kid,checks,dq)===100&&trackDays(kid,checks)===7;}
+
+function blankChecks(dq){
   const o={};
   KIDS.forEach(k=>{
     o[k.id]={};
-    k.quests.forEach(q=>{o[k.id][q.id]={};DAYS.forEach(d=>{o[k.id][q.id][d]=false;});});
+    getQ(dq,k.id).forEach(q=>{o[k.id][q.id]={};DAYS.forEach(d=>{o[k.id][q.id][d]=false;});});
     GOLDEN_RULES.forEach(r=>{o[k.id][r.id]={};DAYS.forEach(d=>{o[k.id][r.id][d]=false;});});
     const tid=k.id==="ellie"?ET_ID:FV_ID;
     o[k.id][tid]={};DAYS.forEach(d=>{o[k.id][tid][d]=false;});
@@ -162,144 +162,153 @@ function blankChecks(){
   return o;
 }
 function blankSide(){
-  const o={};
-  KIDS.forEach(k=>{o[k.id]={};SIDE_QUESTS.forEach(c=>c.quests.forEach(q=>{o[k.id][q.id]=false;}));});
-  return o;
-}
-function mergeChecks(snap){
-  const b=blankChecks();
-  if(!snap)return b;
-  KIDS.forEach(k=>{
-    if(!snap[k.id])return;
-    Object.keys(snap[k.id]).forEach(qid=>{
-      if(!b[k.id][qid])b[k.id][qid]={};
-      Object.keys(snap[k.id][qid]||{}).forEach(d=>{b[k.id][qid][d]=snap[k.id][qid][d];});
-    });
-  });
-  return b;
+  const o={};KIDS.forEach(k=>{o[k.id]={};SIDE_QUESTS.forEach(c=>c.quests.forEach(q=>{o[k.id][q.id]=false;}));});return o;
 }
 function mergeSide(snap){
-  const b=blankSide();
-  if(!snap)return b;
-  KIDS.forEach(k=>{if(snap[k.id])Object.keys(snap[k.id]).forEach(q=>{b[k.id][q]=snap[k.id][q];});});
-  return b;
+  const b=blankSide();if(!snap)return b;
+  KIDS.forEach(k=>{if(snap[k.id])Object.keys(snap[k.id]).forEach(q=>{b[k.id][q]=snap[k.id][q];});});return b;
 }
-function calcPts(kid,checks,side){
-  let p=0;
-  const k=KIDS.find(x=>x.id===kid);
-  if(!k||!checks[kid])return 0;
-  k.quests.forEach(q=>DAYS.forEach(d=>{if(checks[kid]?.[q.id]?.[d])p+=q.pts;}));
-  GOLDEN_RULES.forEach(r=>DAYS.forEach(d=>{if(checks[kid]?.[r.id]?.[d])p+=r.pts;}));
-  const tid=kid==="ellie"?ET_ID:FV_ID;
-  DAYS.forEach(d=>{if(checks[kid]?.[tid]?.[d])p+=0.5;});
-  SIDE_QUESTS.forEach(c=>c.quests.forEach(q=>{if(side[kid]?.[q.id])p+=c.pts;}));
-  return Math.round(p*10)/10;
-}
-function corePct(kid,checks){
-  const k=KIDS.find(x=>x.id===kid);
-  if(!k||!checks[kid])return 0;
-  let t=0,d=0;
-  k.quests.forEach(q=>DAYS.forEach(day=>{t++;if(checks[kid]?.[q.id]?.[day])d++;}));
-  return t===0?0:Math.round(d/t*100);
-}
-function trackDays(kid,checks){
-  const tid=kid==="ellie"?ET_ID:FV_ID;
-  return DAYS.filter(d=>checks[kid]?.[tid]?.[d]).length;
-}
-function sideCount(kid,side){
-  let n=0;SIDE_QUESTS.forEach(c=>c.quests.forEach(q=>{if(side[kid]?.[q.id])n++;}));return n;
-}
-function legendEarned(kid,checks){return corePct(kid,checks)===100&&trackDays(kid,checks)===7;}
 
-// ── STYLES ────────────────────────────────────────────────────
-const C = {
-  card:  {background:"#fff",borderRadius:16,padding:16,marginBottom:12,boxShadow:"0 2px 16px rgba(0,0,0,0.07)"},
-  btn:   (bg,col="#fff",ex={})=>({background:bg,color:col,border:"none",borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer",...ex}),
-  input: {width:"100%",marginBottom:8,border:"1.5px solid #e8ddd4",borderRadius:10,padding:"9px 12px",fontSize:14,outline:"none",boxSizing:"border-box",background:"#fafaf8",color:"#333",display:"block"},
-  pill:  (on,col)=>({background:on?col:"rgba(255,255,255,0.06)",color:on?"#fff":"#9CA3AF",border:on?`2px solid ${col}`:"2px solid transparent",borderRadius:14,padding:"6px 12px",fontSize:12,cursor:"pointer",flexShrink:0,fontWeight:on?"bold":"normal"}),
+const C={
+  card:{background:"#fff",borderRadius:16,padding:16,marginBottom:12,boxShadow:"0 2px 16px rgba(0,0,0,0.07)"},
+  btn:(bg,col="#fff",ex={})=>({background:bg,color:col,border:"none",borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer",...ex}),
+  inp:{width:"100%",marginBottom:8,border:"1.5px solid #e8ddd4",borderRadius:10,padding:"9px 12px",fontSize:14,outline:"none",boxSizing:"border-box",background:"#fafaf8",color:"#333",display:"block"},
+  dark:{width:"100%",marginBottom:8,border:"1.5px solid #2D2B5A",borderRadius:10,padding:"9px 12px",fontSize:13,outline:"none",boxSizing:"border-box",background:"rgba(255,255,255,0.06)",color:"#E0E7FF",display:"block"},
+  pill:(on,col)=>({background:on?col:"rgba(255,255,255,0.06)",color:on?"#fff":"#9CA3AF",border:on?"2px solid "+col:"2px solid transparent",borderRadius:14,padding:"6px 12px",fontSize:12,cursor:"pointer",flexShrink:0,fontWeight:on?"bold":"normal"}),
 };
 
-// ── APP ───────────────────────────────────────────────────────
 function App(){
-  const [fbReady,  setFbReady]  = useState(!!window.__fbReady);
-  const [loading,  setLoading]  = useState(true);
-  const [screen,   setScreen]   = useState("home");
-  const [activeKid,setActiveKid]= useState("jude");
-  const [questView,setQuestView]= useState("grid");
-  const [lootMode, setLootMode] = useState("paid");
-  const [parentMode,setParentMode]=useState(false);
-  const [toast,    setToast]    = useState(null);
-  const [msgModal, setMsgModal] = useState(null);
-  const [msgText,  setMsgText]  = useState("");
-  const [msgFrom,  setMsgFrom]  = useState("jude");
-  const [newPost,  setNewPost]  = useState("");
-  const [postAs,   setPostAs]   = useState("Mom");
-  const [showAddEv,setShowAddEv]= useState(false);
-  const [newEv,    setNewEv]    = useState({title:"",date:"",day:"",who:""});
-  const [liked,    setLiked]    = useState({});
+  const[fbReady,setFbReady]=useState(!!window.__fbReady);
+  const[loading,setLoading]=useState(true);
+  const[currentDay,setCurrentDay]=useState(getCurrentDay);
+  const[screen,setScreen]=useState("home");
+  const[activeKid,setActiveKid]=useState("jude");
+  const[questView,setQuestView]=useState("grid");
+  const[lootMode,setLootMode]=useState("paid");
+  const[parentMode,setParentMode]=useState(false);
+  const[pinModal,setPinModal]=useState(null); // "enter" | "change" | null
+  const[pinInput,setPinInput]=useState("");
+  const[pinError,setPinError]=useState("");
+  const[newPin1,setNewPin1]=useState("");
+  const[newPin2,setNewPin2]=useState("");
+  const[currentPin,setCurrentPin]=useState("1234"); // synced from Firebase
+  const[parentTab,setParentTab]=useState("approvals");
+  const[editorKid,setEditorKid]=useState("jude");
+  const[toast,setToast]=useState(null);
+  const[msgModal,setMsgModal]=useState(null);
+  const[msgText,setMsgText]=useState("");
+  const[msgFrom,setMsgFrom]=useState("jude");
+  const[newPost,setNewPost]=useState("");
+  const[postAs,setPostAs]=useState("Mom");
+  // all posters: parents + kids
+  const ALL_POSTERS=[
+    {id:"Mom", name:"Mom", avatar:"👩", color:"#E07A5F"},
+    {id:"Dad", name:"Dad", avatar:"👨", color:"#3D405B"},
+    ...KIDS.map(k=>({id:k.id,name:k.name,avatar:k.avatar,color:k.color})),
+  ];
+  const[showAddEv,setShowAddEv]=useState(false);
+  const[newEv,setNewEv]=useState({title:"",date:"",day:"",who:""});
+  const[liked,setLiked]=useState({});
+  const BF={label:"",desc:"",pts:"1",icon:"🛏️",editKey:null};
+  const[choreForm,setChoreForm]=useState(BF);
+  const[confirmDel,setConfirmDel]=useState(null);
+  const[dynQuests,setDynQuests]=useState({jude:[],blake:[],avery:[],ellie:[]});
+  const[checks,setChecks]=useState({});
+  const[side,setSide]=useState(blankSide());
+  const[pending,setPending]=useState({});
+  const[approved,setApproved]=useState({});
+  const[redeemed,setRedeemed]=useState([]);
+  const[activity,setActivity]=useState([]);
+  const[posts,setPosts]=useState([]);
+  const[messages,setMessages]=useState({Mom:[],Dad:[]});
+  const[events,setEvents]=useState([]);
 
-  const [checks,   setChecks]   = useState(blankChecks);
-  const [side,     setSide]     = useState(blankSide);
-  const [approved, setApproved] = useState({});
-  const [redeemed, setRedeemed] = useState([]);
-  const [posts,    setPosts]    = useState([]);
-  const [messages, setMessages] = useState({Mom:[],Dad:[]});
-  const [events,   setEvents]   = useState([]);
+  const toast$=(msg,dur=2500)=>{setToast(msg);setTimeout(()=>setToast(null),dur);};
 
-  const toast$ = (msg,dur=2500)=>{setToast(msg);setTimeout(()=>setToast(null),dur);};
-
-  // wait for firebase module
   useEffect(()=>{
     if(window.__fbReady){setFbReady(true);return;}
     const h=()=>setFbReady(true);
-    window.addEventListener("fbReady",h);
-    return()=>window.removeEventListener("fbReady",h);
+    window.addEventListener("fbReady",h);return()=>window.removeEventListener("fbReady",h);
   },[]);
 
-  // subscribe once firebase is ready
+  useEffect(()=>{
+    function sch(){const now=new Date();const ms=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,0)-now;return setTimeout(()=>{setCurrentDay(getCurrentDay());sch();},ms+500);}
+    const t=sch();return()=>clearTimeout(t);
+  },[]);
+
   useEffect(()=>{
     if(!fbReady)return;
-    const {__db:db,__ref:ref,__onValue:onVal,__push:push,__set:set}=window;
+    const{__db:db,__ref:ref,__onValue:onVal,__push:push,__set:set}=window;
     let loaded=0;
-    const done=()=>{loaded++;if(loaded>=7)setLoading(false);};
-
+    const done=()=>{loaded++;if(loaded>=11)setLoading(false);};
     const unsubs=[
-      onVal(ref(db,"checks"),    s=>{setChecks(mergeChecks(s.val()));done();}),
+      onVal(ref(db,"parentPin"),s=>{
+        const v=s.val();
+        if(v){setCurrentPin(v);}
+        else{set(ref(db,"parentPin"),"1234");} // seed default
+        done();
+      }),
+      onVal(ref(db,"dynamicQuests"),s=>{
+        const v=s.val();
+        if(v){
+          const out={};
+          KIDS.forEach(k=>{
+            out[k.id]=v[k.id]?Object.entries(v[k.id]).map(([fk,q])=>({...q,_fbKey:fk})):[];
+          });
+          setDynQuests(out);
+        } else {
+          KIDS.forEach(k=>DEFAULT_QUESTS[k.id].forEach(q=>push(ref(db,"dynamicQuests/"+k.id),q)));
+        }
+        done();
+      }),
+      onVal(ref(db,"checks"),s=>{
+        const raw=s.val()||{};
+        const out={};
+        KIDS.forEach(k=>{
+          out[k.id]={};
+          const ks=raw[k.id]||{};
+          Object.keys(ks).forEach(qid=>{
+            out[k.id][qid]={};
+            Object.keys(ks[qid]||{}).forEach(d=>{out[k.id][qid][d]=ks[qid][d];});
+          });
+        });
+        setChecks(out);done();
+      }),
       onVal(ref(db,"sideChecks"),s=>{setSide(mergeSide(s.val()));done();}),
+      onVal(ref(db,"pending"),   s=>{setPending(s.val()||{});done();}),
+      onVal(ref(db,"activity"),  s=>{
+        const v=s.val();
+        if(v){const arr=Object.entries(v).map(([k,x])=>({...x,_key:k}));arr.sort((a,b)=>(b.ts||0)-(a.ts||0));setActivity(arr.slice(0,15));}
+        else setActivity([]);
+        done();
+      }),
       onVal(ref(db,"approved"),  s=>{setApproved(s.val()||{});done();}),
       onVal(ref(db,"redeemed"),  s=>{
         const v=s.val();
-        setRedeemed(v?Object.entries(v).map(([k,x])=>({...x,_key:k})).reverse():[]);
-        done();
+        setRedeemed(v?Object.entries(v).map(([k,x])=>({...x,_key:k})).reverse():[]);done();
       }),
       onVal(ref(db,"posts"),s=>{
         const v=s.val();
-        if(v){
-          const arr=Object.entries(v).map(([k,x])=>({...x,_key:k}));
-          arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
-          setPosts(arr);
-        } else {
-          [{author:"Mom",avatar:"👩",color:"#E07A5F",text:"I'm cheering you all on from bed! 🤕❤️ Thank you for keeping everything going — you're all absolute champions.",time:"just now",likes:0,ts:Date.now()-120000},
-           {author:"Dad",avatar:"👨",color:"#3D405B",text:"Grocery run Saturday morning. Add to the fridge list by Friday night! 🛒",time:"1h ago",likes:0,ts:Date.now()-3600000}]
+        if(v){const arr=Object.entries(v).map(([k,x])=>({...x,_key:k}));arr.sort((a,b)=>(b.ts||0)-(a.ts||0));setPosts(arr);}
+        else{
+          [{author:"Dad",avatar:"👨",color:"#3D405B",text:"Cheering you all on from bed! Thank you for keeping everything going. You are all absolute champions.",time:"just now",likes:0,ts:Date.now()-120000},
+           {author:"Mom",avatar:"👩",color:"#E07A5F",text:"Grocery run Saturday morning. Add to the fridge list by Friday night!",time:"1h ago",likes:0,ts:Date.now()-3600000}]
           .forEach(p=>push(ref(db,"posts"),p));
         }
         done();
       }),
       onVal(ref(db,"messages"),s=>{
-        const v=s.val()||{};
-        const o={Mom:[],Dad:[]};
-        ["Mom","Dad"].forEach(p=>{
-          if(v[p])o[p]=Object.entries(v[p]).map(([k,x])=>({...x,_key:k})).sort((a,b)=>(a.ts||0)-(b.ts||0));
-        });
+        const v=s.val()||{};const o={Mom:[],Dad:[]};
+        ["Mom","Dad"].forEach(p=>{if(v[p])o[p]=Object.entries(v[p]).map(([k,x])=>({...x,_key:k})).sort((a,b)=>(a.ts||0)-(b.ts||0));});
         setMessages(o);done();
       }),
       onVal(ref(db,"events"),s=>{
         const v=s.val();
-        if(v){setEvents(Object.entries(v).map(([k,x])=>({...x,_key:k})));}
+        if(v)setEvents(Object.entries(v).map(([k,x])=>({...x,_key:k})));
         else{
-          [{title:"Mom's Doctor Appt",date:"Jun 3",day:"Tue",color:"#E07A5F",who:"Mom + Dad",ts:1},
-           {title:"Physio",           date:"Jun 7",day:"Sat",color:"#E07A5F",who:"Mom",      ts:2},
-           {title:"Grocery Run",      date:"Jun 1",day:"Sat",color:"#3D405B",who:"Dad",      ts:3}]
+          [{title:"Mom Doctor Appt",date:"Jun 3",day:"Tue",color:"#E07A5F",who:"Mom + Dad",ts:1},
+           {title:"Physio",         date:"Jun 7",day:"Sat",color:"#E07A5F",who:"Mom",      ts:2},
+           {title:"Grocery Run",    date:"Jun 1",day:"Sat",color:"#3D405B",who:"Dad",      ts:3}]
           .forEach(e=>push(ref(db,"events"),e));
         }
         done();
@@ -308,106 +317,258 @@ function App(){
     return()=>unsubs.forEach(u=>u());
   },[fbReady]);
 
-  // ── FB ACTIONS ──────────────────────────────────────────────
-  const toggleCheck=(kid,qid,day)=>{
-    const {__db:db,__ref:ref,__set:set}=window;
-    const nv=!checks[kid]?.[qid]?.[day];
-    setChecks(p=>({...p,[kid]:{...p[kid],[qid]:{...p[kid][qid],[day]:nv}}}));
-    set(ref(db,`checks/${kid}/${qid}/${day}`),nv);
+  const logActivity=(text,icon="📋")=>{
+    const{__db:db,__ref:ref,__push:push,__onValue:onVal,__set:set}=window;
+    push(ref(db,"activity"),{text,icon,ts:Date.now(),time:"just now"});
+    onVal(ref(db,"activity"),s=>{
+      const v=s.val();if(!v)return;
+      const e=Object.entries(v).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+      if(e.length>15)e.slice(15).forEach(([k])=>set(ref(db,"activity/"+k),null));
+    },{onlyOnce:true});
   };
+
+  const openParentMode=()=>{
+    if(parentMode){setParentMode(false);toast$("Parent mode off");return;}
+    setPinInput("");setPinError("");setPinModal("enter");
+  };
+
+  const submitPin=()=>{
+    if(pinInput===currentPin){
+      setParentMode(true);setPinModal(null);setPinInput("");
+      toast$("Parent mode on 👑");
+    } else {
+      setPinError("Wrong PIN. Try again.");setPinInput("");
+    }
+  };
+
+  const submitChangePin=()=>{
+    if(newPin1.length<4){setPinError("PIN must be at least 4 digits.");return;}
+    if(newPin1!==newPin2){setPinError("PINs do not match.");return;}
+    const{__db:db,__ref:ref,__set:set}=window;
+    set(ref(db,"parentPin"),newPin1);
+    setCurrentPin(newPin1);
+    setPinModal(null);setNewPin1("");setNewPin2("");setPinError("");
+    toast$("PIN updated! 🔐");
+  };
+    const{__db:db,__ref:ref,__set:set,__push:push}=window;
+    const{label,desc,pts,icon,editKey}=choreForm;
+    if(!label.trim()){toast$("Please enter a chore name");return;}
+    const entry={label:label.trim(),desc:desc.trim(),pts:parseFloat(pts)||1,icon:icon||"🛏️"};
+    if(editKey){
+      set(ref(db,"dynamicQuests/"+editorKid+"/"+editKey),entry);
+      logActivity("Updated "+KIDS.find(k=>k.id===editorKid).name+"s quest: "+entry.label,"✏️");
+      toast$("Quest updated!");
+    } else {
+      const nk=uid();
+      set(ref(db,"dynamicQuests/"+editorKid+"/"+nk),{...entry,id:nk});
+      logActivity("Added quest for "+KIDS.find(k=>k.id===editorKid).name+": "+entry.label,"➕");
+      toast$("Quest added!");
+    }
+    setChoreForm(BF);
+  };
+
+  const deleteChore=(kidId,q)=>setConfirmDel({kidId,qid:q._fbKey,label:q.label});
+  const confirmDelete=()=>{
+    const{__db:db,__ref:ref,__set:set}=window;
+    if(!confirmDel)return;
+    set(ref(db,"dynamicQuests/"+confirmDel.kidId+"/"+confirmDel.qid),null);
+    logActivity("Removed quest from "+KIDS.find(k=>k.id===confirmDel.kidId).name+": "+confirmDel.label,"🗑️");
+    toast$("Quest deleted");
+    setConfirmDel(null);
+    if(choreForm.editKey===confirmDel.qid)setChoreForm(BF);
+  };
+
+  const toggleCheck=(kid,qid,day)=>{
+    if(day!==currentDay)return;
+    const{__db:db,__ref:ref,__set:set,__push:push}=window;
+    const k=KIDS.find(x=>x.id===kid);
+    const allQ=[...getQ(dynQuests,kid),...GOLDEN_RULES,{id:kid==="ellie"?ET_ID:FV_ID,label:kid==="ellie"?"No Mess Day":"Daily Fruit/Veg",pts:0.5}];
+    const q=allQ.find(x=>x.id===qid)||{label:qid,pts:1};
+    const existing=Object.entries(pending).find(([,v])=>v.kidId===kid&&v.qid===qid&&v.day===day);
+    if(existing){set(ref(db,"pending/"+existing[0]),null);toast$("Removed from pending");return;}
+    if(checks[kid]?.[qid]?.[day]){set(ref(db,"checks/"+kid+"/"+qid+"/"+day),false);return;}
+    push(ref(db,"pending"),{kidId:kid,kidName:k.name,kidAvatar:k.avatar,kidColor:k.color,qid,qLabel:q.label,day,pts:q.pts,ts:Date.now()});
+    logActivity(k.avatar+" "+k.name+" completed "+q.label+" ("+day+") - awaiting approval","⏳");
+    toast$(q.label+" sent for approval!");
+  };
+
   const toggleSide=(kid,qid,pts)=>{
-    const {__db:db,__ref:ref,__set:set}=window;
+    const{__db:db,__ref:ref,__set:set}=window;
     const nv=!side[kid]?.[qid];
     setSide(p=>({...p,[kid]:{...p[kid],[qid]:nv}}));
-    set(ref(db,`sideChecks/${kid}/${qid}`),nv);
+    set(ref(db,"sideChecks/"+kid+"/"+qid),nv);
     const k=KIDS.find(x=>x.id===kid);
-    toast$(nv?`+${pts} pts for ${k.name}! ⚡`:`Removed ${pts} pts from ${k.name}`);
+    toast$(nv?"+"+pts+" pts for "+k.name+"! ⚡":"Removed "+pts+" pts from "+k.name);
   };
+
+  const approveChore=(pkey,entry)=>{
+    const{__db:db,__ref:ref,__set:set}=window;
+    set(ref(db,"checks/"+entry.kidId+"/"+entry.qid+"/"+entry.day),true);
+    set(ref(db,"pending/"+pkey),null);
+    logActivity("Approved: "+entry.kidAvatar+" "+entry.kidName+"s "+entry.qLabel+" ("+entry.day+") +"+entry.pts+"pt","✅");
+    toast$("Approved! +"+entry.pts+"pt for "+entry.kidName);
+  };
+
+  const denyChore=(pkey,entry)=>{
+    const{__db:db,__ref:ref,__set:set}=window;
+    set(ref(db,"checks/"+entry.kidId+"/"+entry.qid+"/"+entry.day),false);
+    set(ref(db,"pending/"+pkey),null);
+    logActivity("Sent back: "+entry.kidAvatar+" "+entry.kidName+"s "+entry.qLabel+" - try again!","❌");
+    toast$(entry.kidName+"s "+entry.qLabel+" sent back for review");
+  };
+
   const resetWeek=()=>{
-    const {__db:db,__ref:ref,__set:set}=window;
-    const bc=blankChecks(),bs=blankSide();
-    setChecks(bc);setSide(bs);setApproved({});
-    set(ref(db,"checks"),bc);set(ref(db,"sideChecks"),bs);set(ref(db,"approved"),{});
-    toast$("Week reset! Fresh start 🌅");
+    const{__db:db,__ref:ref,__set:set}=window;
+    const bc=blankChecks(dynQuests),bs=blankSide();
+    setChecks(bc);setSide(bs);setApproved({});setPending({});
+    set(ref(db,"checks"),bc);set(ref(db,"sideChecks"),bs);
+    set(ref(db,"approved"),{});set(ref(db,"pending"),{});
+    logActivity("Week reset - fresh start!","🔄");
+    toast$("Week reset! Fresh start");
   };
+
   const toggleApprove=(kid)=>{
-    const {__db:db,__ref:ref,__set:set}=window;
+    const{__db:db,__ref:ref,__set:set}=window;
     const nv=!approved[kid];
     setApproved(p=>({...p,[kid]:nv}));
-    set(ref(db,`approved/${kid}`),nv);
-    toast$(nv?"Week approved! 👑":"Approval removed");
+    set(ref(db,"approved/"+kid),nv);
+    toast$(nv?"Week approved!":"Approval removed");
   };
+
   const redeemReward=(reward,kid)=>{
-    const {__db:db,__ref:ref,__push:push}=window;
+    const{__db:db,__ref:ref,__push:push}=window;
     if(reward.isLegend){
-      if(!legendEarned(kid,checks)){toast$("Complete ALL core chores + daily goal to unlock! 🏆",3000);return;}
+      if(!legendEarned(kid,checks,dynQuests)){toast$("Complete ALL core chores + daily goal to unlock!",3000);return;}
+    } else if(reward.pctReq!==undefined){
+      const pct=corePct(kid,checks,dynQuests);
+      if(pct<reward.pctReq){toast$("Need "+reward.pctReq+"% core chores! Currently "+pct+"%",3000);return;}
     } else {
-      if(calcPts(kid,checks,side)<reward.pts){toast$(`Need ${(reward.pts-calcPts(kid,checks,side)).toFixed(1)} more pts! 💪`);return;}
+      const pts=calcPts(kid,checks,side,dynQuests);
+      if(pts<reward.pts){toast$("Need "+(reward.pts-pts).toFixed(1)+" more pts!");return;}
     }
     const k=KIDS.find(x=>x.id===kid);
     push(ref(db,"redeemed"),{...reward,by:k.name,avatar:k.avatar,when:"just now",ts:Date.now()});
-    toast$(reward.isLegend?`🏆 ${k.name} earned CHORE-FREE WEEK! 👑`:`${k.name} claimed: ${reward.label} ${reward.icon}`,3500);
+    toast$(reward.isLegend?k.name+" earned CHORE-FREE WEEK!":k.name+" claimed: "+reward.label+" "+reward.icon,3500);
   };
+
   const handlePost=()=>{
-    const {__db:db,__ref:ref,__push:push}=window;
+    const{__db:db,__ref:ref,__push:push}=window;
     if(!newPost.trim())return;
-    const s=postAs==="Mom"?{avatar:"👩",color:"#E07A5F"}:{avatar:"👨",color:"#3D405B"};
-    push(ref(db,"posts"),{author:postAs,...s,text:newPost,time:"just now",likes:0,ts:Date.now()});
+    const poster=ALL_POSTERS.find(p=>p.id===postAs)||ALL_POSTERS[0];
+    push(ref(db,"posts"),{author:poster.name,avatar:poster.avatar,color:poster.color,text:newPost,time:"just now",likes:0,ts:Date.now()});
     setNewPost("");
   };
+
   const toggleLike=(key)=>{
-    const {__db:db,__ref:ref,__set:set}=window;
+    const{__db:db,__ref:ref,__set:set}=window;
     const post=posts.find(p=>p._key===key);if(!post)return;
     const al=liked[key];
-    const nl=Math.max(0,(post.likes||0)+(al?-1:1));
     setLiked(p=>({...p,[key]:!al}));
-    set(ref(db,`posts/${key}/likes`),nl);
+    set(ref(db,"posts/"+key+"/likes"),Math.max(0,(post.likes||0)+(al?-1:1)));
   };
+
   const sendMsg=()=>{
-    const {__db:db,__ref:ref,__push:push}=window;
+    const{__db:db,__ref:ref,__push:push}=window;
     if(!msgText.trim())return;
     const f=KIDS.find(k=>k.id===msgFrom);
-    push(ref(db,`messages/${msgModal}`),{from:f.name,avatar:f.avatar,color:f.color,text:msgText,time:"just now",ts:Date.now()});
-    setMsgText("");toast$(`Message sent to ${msgModal}! 📨`);setMsgModal(null);
+    push(ref(db,"messages/"+msgModal),{from:f.name,avatar:f.avatar,color:f.color,text:msgText,time:"just now",ts:Date.now()});
+    setMsgText("");toast$("Message sent to "+msgModal+"!");setMsgModal(null);
   };
+
   const addEvent=()=>{
-    const {__db:db,__ref:ref,__push:push}=window;
+    const{__db:db,__ref:ref,__push:push}=window;
     if(!newEv.title||!newEv.date)return;
     push(ref(db,"events"),{...newEv,color:"#6366F1",ts:Date.now()});
     setNewEv({title:"",date:"",day:"",who:""});setShowAddEv(false);
   };
 
   const kid=KIDS.find(k=>k.id===activeKid);
+  const edKid=KIDS.find(k=>k.id===editorKid);
 
-  // ── LOADING ──────────────────────────────────────────────────
-  if(!fbReady||loading) return (
+  if(!fbReady||loading)return(
     <div style={{background:"#0F0F1A",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
       <div style={{fontSize:48}}>⚔️</div>
       <div style={{color:"#818CF8",fontSize:18,fontWeight:"bold"}}>Townsend Family Quest Board</div>
-      <div style={{color:"#4B5563",fontSize:13}}>{fbReady?"Loading quests…":"Connecting…"}</div>
+      <div style={{color:"#4B5563",fontSize:13}}>{fbReady?"Loading quests...":"Connecting..."}</div>
       <div style={{width:36,height:36,border:"3px solid #312E81",borderTop:"3px solid #818CF8",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
     </div>
   );
 
   const TABS=[{id:"home",icon:"🏠",label:"Home"},{id:"quest",icon:"⚔️",label:"Quests"},{id:"loot",icon:"🎁",label:"Loot"},{id:"calendar",icon:"📅",label:"Events"},{id:"photos",icon:"📷",label:"Photos"}];
 
-  return (
+  const mkChk=(kid,qid,day,color,pending)=>{
+    const isToday=day===currentDay,chk=checks[kid]?.[qid]?.[day];
+    const isPend=Object.values(pending).some(v=>v.kidId===kid&&v.qid===qid&&v.day===day);
+    return(
+      <td key={day} style={{textAlign:"center",padding:"5px 2px"}}>
+        <button onClick={()=>toggleCheck(kid,qid,day)} style={{width:26,height:26,borderRadius:7,
+          border:chk?"2px solid "+color:isPend?"2px solid #F59E0B":isToday?"2px solid #A5B4FC":"2px solid #E5E7EB",
+          background:chk?color:isPend?"#FEF3C7":isToday?"#EEF2FF":"#F9FAFB",
+          cursor:isToday?"pointer":"default",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto",
+          opacity:!isToday&&!chk&&!isPend?0.4:1}}>
+          {chk?"✓":isPend?"⏳":isToday?"·":""}
+        </button>
+      </td>
+    );
+  };
+
+  return(
     <div style={{fontFamily:"Georgia,'Times New Roman',serif",background:"#0F0F1A",minHeight:"100vh",maxWidth:460,margin:"0 auto",display:"flex",flexDirection:"column",position:"relative"}}>
 
-      {/* TOAST */}
       {toast&&<div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",background:"#1E1B4B",color:"#C7D2FE",border:"1px solid #4F46E5",borderRadius:24,padding:"10px 22px",fontSize:13,zIndex:300,boxShadow:"0 8px 32px rgba(79,70,229,0.4)",whiteSpace:"nowrap"}}>{toast}</div>}
 
-      {/* MESSAGE MODAL */}
+      {/* PIN MODAL */}
+      {pinModal==="enter"&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:260,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"#1A1A2E",borderRadius:20,padding:28,width:"100%",maxWidth:320,border:"2px solid #6366F1",textAlign:"center"}}>
+            <div style={{fontSize:32,marginBottom:8}}>🔐</div>
+            <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:17,marginBottom:6}}>Parent Mode</div>
+            <div style={{color:"#818CF8",fontSize:13,marginBottom:20}}>Enter your PIN to continue</div>
+            <div style={{display:"flex",justifyContent:"center",gap:10,marginBottom:16}}>
+              {[0,1,2,3].map(i=>(
+                <div key={i} style={{width:14,height:14,borderRadius:"50%",background:pinInput.length>i?"#6366F1":"rgba(255,255,255,0.15)",transition:"background 0.15s"}}/>
+              ))}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
+              {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((n,i)=>(
+                <button key={i} onClick={()=>{
+                  if(n==="⌫"){setPinInput(p=>p.slice(0,-1));setPinError("");}
+                  else if(n!==""){const np=pinInput+n;setPinInput(np);if(np.length>=4){if(np===currentPin){setParentMode(true);setPinModal(null);setPinInput("");toast$("Parent mode on 👑");}else{setPinError("Wrong PIN");setPinInput("");}}}
+                }} style={{background:n===""?"transparent":"rgba(255,255,255,0.08)",color:"#E0E7FF",border:n===""?"none":"1px solid #2D2B5A",borderRadius:12,padding:"14px 0",fontSize:18,cursor:n===""?"default":"pointer",fontWeight:"bold"}}>
+                  {n}
+                </button>
+              ))}
+            </div>
+            {pinError&&<div style={{color:"#FCA5A5",fontSize:13,marginBottom:8}}>{pinError}</div>}
+            <button onClick={()=>{setPinModal(null);setPinInput("");setPinError("");}} style={{background:"rgba(255,255,255,0.06)",color:"#9CA3AF",border:"none",borderRadius:12,padding:"10px 24px",fontSize:13,cursor:"pointer"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRM MODAL */}
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:250,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"#1A1A2E",borderRadius:20,padding:24,width:"100%",maxWidth:340,border:"2px solid #EF4444",textAlign:"center"}}>
+            <div style={{fontSize:20,marginBottom:8}}>🗑️</div>
+            <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:15,marginBottom:8}}>Delete Quest?</div>
+            <div style={{color:"#9CA3AF",fontSize:13,marginBottom:20}}>"{confirmDel.label}" will be removed from {KIDS.find(k=>k.id===confirmDel.kidId)?.name}s list.</div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setConfirmDel(null)} style={{flex:1,background:"rgba(255,255,255,0.08)",color:"#9CA3AF",border:"none",borderRadius:12,padding:"11px",fontSize:13,cursor:"pointer"}}>Cancel</button>
+              <button onClick={confirmDelete} style={{flex:1,background:"#EF4444",color:"#fff",border:"none",borderRadius:12,padding:"11px",fontSize:13,cursor:"pointer",fontWeight:"bold"}}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {msgModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
           <div style={{background:"#1A1A2E",borderRadius:"24px 24px 0 0",padding:20,width:"100%",maxWidth:460,borderTop:"2px solid #4F46E5"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-              <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:16}}>{msgModal==="Mom"?"💌 Message Mom":"📨 Message Dad"}</div>
-              <button onClick={()=>setMsgModal(null)} style={{background:"rgba(255,255,255,0.1)",color:"#9CA3AF",border:"none",borderRadius:10,padding:"4px 10px",cursor:"pointer"}}>✕</button>
+              <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:16}}>{msgModal==="Mom"?"Message Mom":"Message Dad"}</div>
+              <button onClick={()=>setMsgModal(null)} style={{background:"rgba(255,255,255,0.1)",color:"#9CA3AF",border:"none",borderRadius:10,padding:"4px 10px",cursor:"pointer"}}>X</button>
             </div>
             <div style={{maxHeight:160,overflowY:"auto",marginBottom:12}}>
               {messages[msgModal].length===0
-                ?<div style={{color:"#4B5563",fontSize:13,fontStyle:"italic",textAlign:"center",padding:"20px 0"}}>No messages yet. Say hi! 👋</div>
+                ?<div style={{color:"#4B5563",fontSize:13,fontStyle:"italic",textAlign:"center",padding:"20px 0"}}>No messages yet. Say hi!</div>
                 :messages[msgModal].map((m,i)=>(
                   <div key={m._key||i} style={{display:"flex",gap:8,marginBottom:10,alignItems:"flex-start"}}>
                     <div style={{width:30,height:30,borderRadius:"50%",background:m.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>{m.avatar}</div>
@@ -423,103 +584,212 @@ function App(){
             <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
               {KIDS.map(k=><button key={k.id} onClick={()=>setMsgFrom(k.id)} style={C.pill(msgFrom===k.id,k.color)}>{k.avatar} {k.name}</button>)}
             </div>
-            <textarea value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder={`Write to ${msgModal}…`} rows={3}
-              style={{...C.input,background:"rgba(255,255,255,0.06)",border:"1.5px solid #2D2B5A",color:"#E0E7FF",marginBottom:10}}/>
-            <button onClick={sendMsg} style={{...C.btn("#6366F1"),width:"100%",borderRadius:12,padding:"11px",fontSize:14}}>Send to {msgModal} 📨</button>
+            <textarea value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder={"Write to "+msgModal+"..."} rows={3}
+              style={{...C.inp,background:"rgba(255,255,255,0.06)",border:"1.5px solid #2D2B5A",color:"#E0E7FF",marginBottom:10}}/>
+            <button onClick={sendMsg} style={{...C.btn("#6366F1"),width:"100%",borderRadius:12,padding:"11px",fontSize:14}}>Send to {msgModal}</button>
           </div>
         </div>
       )}
 
-      {/* HEADER */}
       <div style={{background:"linear-gradient(135deg,#1E1B4B,#312E81)",padding:"14px 14px 10px",position:"sticky",top:0,zIndex:10,borderBottom:"1px solid #4338CA"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
-            <div style={{fontSize:14,fontWeight:"bold",color:"#E0E7FF"}}>⚔️ Townsend Family Quest Board</div>
+            <div style={{fontSize:14,fontWeight:"bold",color:"#E0E7FF"}}>Townsend Family Quest Board</div>
             <div style={{fontSize:10,color:"#818CF8",marginTop:1,fontStyle:"italic"}}>Every chore is a quest. Every quest earns glory.</div>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
-            <button onClick={()=>{setParentMode(p=>!p);toast$(parentMode?"Parent mode off":"Parent mode on 👑");}}
-              style={{background:parentMode?"#4F46E5":"rgba(255,255,255,0.08)",color:parentMode?"#fff":"#818CF8",border:`1px solid ${parentMode?"#6366F1":"#374151"}`,borderRadius:10,padding:"4px 9px",fontSize:11,cursor:"pointer"}}>
-              {parentMode?"👑 Parent":"🔒 Lock"}
+            <button onClick={openParentMode}
+              style={{background:parentMode?"#4F46E5":"rgba(255,255,255,0.08)",color:parentMode?"#fff":"#818CF8",border:"1px solid "+(parentMode?"#6366F1":"#374151"),borderRadius:10,padding:"4px 9px",fontSize:11,cursor:"pointer"}}>
+              {parentMode?"👑 Parent On":"🔒 Lock"}{Object.keys(pending).length>0&&<span style={{background:"#EF4444",color:"#fff",borderRadius:"50%",padding:"0 4px",fontSize:9,marginLeft:3}}>{Object.keys(pending).length}</span>}
             </button>
             <div style={{display:"flex",gap:4}}>
-              <button onClick={()=>{setMsgModal("Mom");setMsgText("");}}
-                style={{background:"rgba(224,122,95,0.2)",color:"#FCA5A5",border:"1px solid #E07A5F",borderRadius:10,padding:"4px 8px",fontSize:11,cursor:"pointer"}}>
-                💌 Mom{messages.Mom.length>0&&<span style={{background:"#E07A5F",color:"#fff",borderRadius:"50%",padding:"0 4px",fontSize:9,marginLeft:2}}>{messages.Mom.length}</span>}
+              <button onClick={()=>{setMsgModal("Mom");setMsgText("");}} style={{background:"rgba(224,122,95,0.2)",color:"#FCA5A5",border:"1px solid #E07A5F",borderRadius:10,padding:"4px 8px",fontSize:11,cursor:"pointer"}}>
+                Mom{messages.Mom.length>0&&<span style={{background:"#E07A5F",color:"#fff",borderRadius:"50%",padding:"0 4px",fontSize:9,marginLeft:2}}>{messages.Mom.length}</span>}
               </button>
-              <button onClick={()=>{setMsgModal("Dad");setMsgText("");}}
-                style={{background:"rgba(61,64,91,0.4)",color:"#93C5FD",border:"1px solid #3D405B",borderRadius:10,padding:"4px 8px",fontSize:11,cursor:"pointer"}}>
-                📨 Dad{messages.Dad.length>0&&<span style={{background:"#3D405B",color:"#fff",borderRadius:"50%",padding:"0 4px",fontSize:9,marginLeft:2}}>{messages.Dad.length}</span>}
+              <button onClick={()=>{setMsgModal("Dad");setMsgText("");}} style={{background:"rgba(61,64,91,0.4)",color:"#93C5FD",border:"1px solid #3D405B",borderRadius:10,padding:"4px 8px",fontSize:11,cursor:"pointer"}}>
+                Dad{messages.Dad.length>0&&<span style={{background:"#3D405B",color:"#fff",borderRadius:"50%",padding:"0 4px",fontSize:9,marginLeft:2}}>{messages.Dad.length}</span>}
               </button>
             </div>
           </div>
         </div>
         <div style={{display:"flex",gap:6,marginTop:10,overflowX:"auto",paddingBottom:2}}>
           {KIDS.map(k=>{
-            const pts=calcPts(k.id,checks,side),pct=corePct(k.id,checks),fv=trackDays(k.id,checks),leg=legendEarned(k.id,checks),isA=activeKid===k.id;
+            const pts=calcPts(k.id,checks,side,dynQuests),pct=corePct(k.id,checks,dynQuests),fv=trackDays(k.id,checks),leg=legendEarned(k.id,checks,dynQuests),isA=activeKid===k.id;
             return(
               <button key={k.id} onClick={()=>{setActiveKid(k.id);if(screen!=="home")setScreen("quest");}}
-                style={{background:isA?k.color:"rgba(255,255,255,0.06)",color:isA?"#fff":"#9CA3AF",border:isA?`2px solid ${k.color}`:"2px solid transparent",borderRadius:14,padding:"5px 10px",fontSize:11,cursor:"pointer",flexShrink:0,fontWeight:isA?"bold":"normal",position:"relative"}}>
+                style={{background:isA?k.color:"rgba(255,255,255,0.06)",color:isA?"#fff":"#9CA3AF",border:isA?"2px solid "+k.color:"2px solid transparent",borderRadius:14,padding:"5px 10px",fontSize:11,cursor:"pointer",flexShrink:0,fontWeight:isA?"bold":"normal",position:"relative"}}>
                 {leg&&<span style={{position:"absolute",top:-4,right:-4,fontSize:10}}>👑</span>}
                 {k.avatar} {k.name}
-                <span style={{display:"block",fontSize:9,opacity:0.85}}>{pts}pts·{pct}%·{k.id==="ellie"?"🧸":"🥦"}{fv}/7</span>
+                <span style={{display:"block",fontSize:9,opacity:0.85}}>{pts}pts {pct}% {k.id==="ellie"?"🧸":"🥦"}{fv}/7</span>
               </button>
             );
           })}
-          {parentMode&&<button onClick={resetWeek} style={{background:"rgba(239,68,68,0.15)",color:"#FCA5A5",border:"1px solid #EF4444",borderRadius:14,padding:"5px 10px",fontSize:11,cursor:"pointer",flexShrink:0}}>🔄 Reset</button>}
+          {parentMode&&<button onClick={resetWeek} style={{background:"rgba(239,68,68,0.15)",color:"#FCA5A5",border:"1px solid #EF4444",borderRadius:14,padding:"5px 10px",fontSize:11,cursor:"pointer",flexShrink:0}}>Reset Week</button>}
         </div>
       </div>
 
-      {/* CONTENT */}
       <div style={{flex:1,overflowY:"auto",paddingBottom:82}}>
 
-        {/* HOME */}
         {screen==="home"&&(
           <div style={{padding:16}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
               {KIDS.map(k=>{
-                const pts=calcPts(k.id,checks,side),pct=corePct(k.id,checks),fv=trackDays(k.id,checks),leg=legendEarned(k.id,checks);
+                const pts=calcPts(k.id,checks,side,dynQuests),pct=corePct(k.id,checks,dynQuests),fv=trackDays(k.id,checks),leg=legendEarned(k.id,checks,dynQuests);
                 return(
                   <div key={k.id} onClick={()=>{setActiveKid(k.id);setScreen("quest");}}
-                    style={{background:"#fff",borderRadius:14,padding:14,borderTop:`3px solid ${k.color}`,cursor:"pointer",boxShadow:"0 2px 12px rgba(0,0,0,0.07)",position:"relative"}}>
+                    style={{background:"#fff",borderRadius:14,padding:14,borderTop:"3px solid "+k.color,cursor:"pointer",boxShadow:"0 2px 12px rgba(0,0,0,0.07)",position:"relative"}}>
                     {leg&&<div style={{position:"absolute",top:8,right:10,fontSize:16}}>👑</div>}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <span style={{fontSize:20}}>{k.avatar}</span>
-                      <span style={{fontSize:9,background:k.bg,color:k.color,border:`1px solid ${k.border}`,borderRadius:8,padding:"2px 6px"}}>{k.level}</span>
+                      <span style={{fontSize:9,background:k.bg,color:k.color,border:"1px solid "+k.border,borderRadius:8,padding:"2px 6px"}}>{k.level}</span>
                     </div>
                     <div style={{fontWeight:"bold",fontSize:14,color:"#1E1B4B",marginTop:4}}>{k.name}</div>
                     <div style={{fontSize:20,fontWeight:"bold",color:k.color}}>{pts}<span style={{fontSize:11,color:"#aaa",fontWeight:"normal"}}> pts</span></div>
                     <div style={{background:"#F3F4F6",borderRadius:6,height:6,marginTop:6}}>
-                      <div style={{background:k.color,height:6,borderRadius:6,width:`${pct}%`,transition:"width 0.4s"}}/>
+                      <div style={{background:k.color,height:6,borderRadius:6,width:pct+"%",transition:"width 0.4s"}}/>
                     </div>
-                    <div style={{fontSize:10,color:"#9CA3AF",marginTop:3}}>{pct}% · {k.id==="ellie"?"🧸":"🥦"} {fv}/7</div>
-                    {approved[k.id]&&<div style={{fontSize:10,color:"#10B981",marginTop:2}}>✓ Approved</div>}
+                    <div style={{fontSize:10,color:"#9CA3AF",marginTop:3}}>{pct}% {k.id==="ellie"?"🧸":"🥦"} {fv}/7</div>
+                    {approved[k.id]&&<div style={{fontSize:10,color:"#10B981",marginTop:2}}>Approved</div>}
                   </div>
                 );
               })}
             </div>
 
-            <div style={{background:"linear-gradient(135deg,#FDF2F8,#FEF3C7)",borderRadius:16,padding:14,marginBottom:14,border:"1px solid #F9A8D4"}}>
-              <div style={{fontSize:13,fontWeight:"bold",color:"#BE185D",marginBottom:4}}>💝 From Mom's Recovery Base</div>
-              <div style={{fontSize:13,color:"#6B7280",lineHeight:1.55}}>I might be off my feet but I see every quest you complete. Eat your fruits and veggies every day to unlock the legendary Chore-Free Week! 🥦🍎👑</div>
+            {parentMode&&(
+              <div style={{background:"linear-gradient(135deg,#1E1B4B,#312E81)",borderRadius:16,padding:14,marginBottom:14,border:"2px solid #6366F1"}}>
+                <div style={{display:"flex",gap:6,marginBottom:12}}>
+                  <button onClick={()=>setParentTab("approvals")} style={{background:parentTab==="approvals"?"#6366F1":"rgba(255,255,255,0.08)",color:"#fff",border:"none",borderRadius:12,padding:"6px 12px",fontSize:11,cursor:"pointer"}}>
+                    Approvals{Object.keys(pending).length>0&&<span style={{background:"#EF4444",color:"#fff",borderRadius:"50%",padding:"0 4px",fontSize:9,marginLeft:3}}>{Object.keys(pending).length}</span>}
+                  </button>
+                  <button onClick={()=>setParentTab("editor")} style={{background:parentTab==="editor"?"#6366F1":"rgba(255,255,255,0.08)",color:"#fff",border:"none",borderRadius:12,padding:"6px 12px",fontSize:11,cursor:"pointer"}}>Quest Editor</button>
+                  <button onClick={()=>{setParentTab("pin");setNewPin1("");setNewPin2("");setPinError("");}} style={{background:parentTab==="pin"?"#6366F1":"rgba(255,255,255,0.08)",color:"#fff",border:"none",borderRadius:12,padding:"6px 12px",fontSize:11,cursor:"pointer"}}>🔐 PIN</button>
+                </div>
+
+                {parentTab==="approvals"&&(
+                  <>
+                    <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:13,marginBottom:8}}>Approvals Queue</div>
+                    {Object.keys(pending).length===0
+                      ?<div style={{color:"#4B5563",fontSize:13,fontStyle:"italic",textAlign:"center",padding:"10px 0"}}>All clear! No chores awaiting approval.</div>
+                      :Object.entries(pending).map(([pkey,entry])=>(
+                        <div key={pkey} style={{background:"rgba(255,255,255,0.07)",borderRadius:12,padding:"10px 12px",marginBottom:8,borderLeft:"3px solid "+(entry.kidColor||"#6366F1")}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                            <div>
+                              <div style={{color:"#E0E7FF",fontSize:13,fontWeight:"bold"}}>{entry.kidAvatar} {entry.kidName}</div>
+                              <div style={{color:"#818CF8",fontSize:12,marginTop:2}}>{entry.qLabel}</div>
+                              <div style={{color:"#4B5563",fontSize:11,marginTop:1}}>{entry.day} +{entry.pts}pt</div>
+                            </div>
+                            <div style={{display:"flex",gap:5,flexShrink:0}}>
+                              <button onClick={()=>approveChore(pkey,entry)} style={{background:"#10B981",color:"#fff",border:"none",borderRadius:10,padding:"6px 11px",fontSize:12,cursor:"pointer",fontWeight:"bold"}}>Approve</button>
+                              <button onClick={()=>denyChore(pkey,entry)}    style={{background:"#EF4444",color:"#fff",border:"none",borderRadius:10,padding:"6px 11px",fontSize:12,cursor:"pointer",fontWeight:"bold"}}>Deny</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </>
+                )}
+
+                {parentTab==="editor"&&(
+                  <>
+                    <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:13,marginBottom:10}}>Quest Editor</div>
+                    <select value={editorKid} onChange={e=>{setEditorKid(e.target.value);setChoreForm(BF);}} style={{...C.dark,marginBottom:12}}>
+                      {KIDS.map(k=><option key={k.id} value={k.id}>{k.avatar} {k.name}</option>)}
+                    </select>
+                    <div style={{background:"rgba(255,255,255,0.04)",borderRadius:12,padding:12,marginBottom:12,border:"1px solid #2D2B5A"}}>
+                      <div style={{color:"#818CF8",fontSize:11,marginBottom:8}}>{choreForm.editKey?"Editing quest":"New quest"}</div>
+                      <div style={{marginBottom:8}}>
+                        <div style={{color:"#6B7280",fontSize:11,marginBottom:4}}>Icon</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                          {EMOJIS.map(e=>(
+                            <button key={e} onClick={()=>setChoreForm(f=>({...f,icon:e}))}
+                              style={{fontSize:18,background:choreForm.icon===e?"rgba(99,102,241,0.3)":"transparent",border:choreForm.icon===e?"2px solid #6366F1":"2px solid transparent",borderRadius:8,padding:"2px 4px",cursor:"pointer"}}>
+                              {e}
+                            </button>
+                          ))}
+                          <input value={!EMOJIS.includes(choreForm.icon)?choreForm.icon:""} onChange={e=>setChoreForm(f=>({...f,icon:e.target.value}))}
+                            placeholder="other" style={{...C.dark,width:60,marginBottom:0,fontSize:12,padding:"4px 8px"}}/>
+                        </div>
+                      </div>
+                      <input value={choreForm.label} onChange={e=>setChoreForm(f=>({...f,label:e.target.value}))} placeholder="Chore name e.g. Vacuum Living Room" style={C.dark}/>
+                      <input value={choreForm.desc}  onChange={e=>setChoreForm(f=>({...f,desc:e.target.value}))}  placeholder="Criteria e.g. Move rugs and get corners" style={C.dark}/>
+                      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+                        <input value={choreForm.pts} onChange={e=>setChoreForm(f=>({...f,pts:e.target.value}))} placeholder="Points e.g. 1 or 0.5" type="number" step="0.5" min="0.5"
+                          style={{...C.dark,marginBottom:0,flex:1}}/>
+                        <span style={{color:"#818CF8",fontSize:12}}>pts</span>
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={saveChore} style={{flex:1,background:"#6366F1",color:"#fff",border:"none",borderRadius:12,padding:"10px",fontSize:13,cursor:"pointer",fontWeight:"bold"}}>
+                          {choreForm.editKey?"Save Changes":"Add Quest"}
+                        </button>
+                        {choreForm.editKey&&<button onClick={()=>setChoreForm(BF)} style={{background:"rgba(255,255,255,0.08)",color:"#9CA3AF",border:"none",borderRadius:12,padding:"10px 14px",fontSize:12,cursor:"pointer"}}>Cancel</button>}
+                      </div>
+                    </div>
+                    <div style={{color:"#818CF8",fontSize:11,marginBottom:8}}>{edKid.avatar} {edKid.name} current quests ({getQ(dynQuests,editorKid).length})</div>
+                    {getQ(dynQuests,editorKid).length===0
+                      ?<div style={{color:"#4B5563",fontSize:12,fontStyle:"italic",textAlign:"center",padding:"10px 0"}}>No quests yet - add one above!</div>
+                      :getQ(dynQuests,editorKid).map(q=>(
+                        <div key={q._fbKey||q.id} style={{background:"rgba(255,255,255,0.05)",borderRadius:10,padding:"9px 12px",marginBottom:6,borderLeft:"3px solid "+(choreForm.editKey===q._fbKey?"#6366F1":"#2D2B5A")}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{color:"#E0E7FF",fontSize:12,fontWeight:"bold"}}>{q.icon} {q.label}</div>
+                              <div style={{color:"#4B5563",fontSize:10,marginTop:1}}>{q.desc} {q.pts}pt</div>
+                            </div>
+                            <div style={{display:"flex",gap:4,flexShrink:0,marginLeft:8}}>
+                              <button onClick={()=>setChoreForm({label:q.label,desc:q.desc||"",pts:String(q.pts||1),icon:q.icon||"🛏️",editKey:q._fbKey})}
+                                style={{background:"rgba(99,102,241,0.2)",color:"#818CF8",border:"1px solid #4338CA",borderRadius:8,padding:"4px 9px",fontSize:11,cursor:"pointer"}}>Edit</button>
+                              <button onClick={()=>deleteChore(editorKid,q)}
+                                style={{background:"rgba(239,68,68,0.15)",color:"#FCA5A5",border:"1px solid #EF4444",borderRadius:8,padding:"4px 9px",fontSize:11,cursor:"pointer"}}>Del</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </>
+                )}
+
+                {parentTab==="pin"&&(
+                  <>
+                    <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:13,marginBottom:10}}>🔐 Change Parent PIN</div>
+                    <div style={{color:"#9CA3AF",fontSize:12,marginBottom:12}}>Either parent can update the PIN. Changes sync instantly to all devices.</div>
+                    <input value={newPin1} onChange={e=>setNewPin1(e.target.value.replace(/\D/g,"").slice(0,8))}
+                      placeholder="New PIN (numbers only)" type="password" inputMode="numeric" style={C.dark}/>
+                    <input value={newPin2} onChange={e=>setNewPin2(e.target.value.replace(/\D/g,"").slice(0,8))}
+                      placeholder="Confirm new PIN" type="password" inputMode="numeric" style={{...C.dark,marginBottom:pinError?4:8}}/>
+                    {pinError&&<div style={{color:"#FCA5A5",fontSize:12,marginBottom:8}}>{pinError}</div>}
+                    <button onClick={submitChangePin} style={{width:"100%",background:"#6366F1",color:"#fff",border:"none",borderRadius:12,padding:"11px",fontSize:13,cursor:"pointer",fontWeight:"bold"}}>
+                      Save New PIN 🔐
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div style={{background:"linear-gradient(135deg,#EEF2FF,#E0E7FF)",borderRadius:16,padding:14,marginBottom:14,border:"1px solid #A5B4FC"}}>
+              <div style={{fontSize:13,fontWeight:"bold",color:"#4338CA",marginBottom:4}}>From Dad's Recovery Base</div>
+              <div style={{fontSize:13,color:"#6B7280",lineHeight:1.55}}>I might be off my feet but I see every quest you complete. Eat your fruits and veggies every day to unlock the legendary Chore-Free Week!</div>
               <div style={{display:"flex",gap:8,marginTop:10}}>
-                <button onClick={()=>{setMsgModal("Mom");setMsgText("");}} style={C.btn("#E07A5F","#fff",{fontSize:12,padding:"6px 14px"})}>💌 Message Mom</button>
-                <button onClick={()=>{setMsgModal("Dad");setMsgText("");}} style={C.btn("#3D405B","#fff",{fontSize:12,padding:"6px 14px"})}>📨 Message Dad</button>
+                <button onClick={()=>{setMsgModal("Mom");setMsgText("");}} style={C.btn("#E07A5F","#fff",{fontSize:12,padding:"6px 14px"})}>Message Mom</button>
+                <button onClick={()=>{setMsgModal("Dad");setMsgText("");}} style={C.btn("#3D405B","#fff",{fontSize:12,padding:"6px 14px"})}>Message Dad</button>
               </div>
             </div>
 
             <div style={C.card}>
-              <div style={{fontSize:11,color:"#aaa",marginBottom:8,fontStyle:"italic"}}>Post a family update</div>
-              <div style={{display:"flex",gap:6,marginBottom:10}}>
-                {["Mom","Dad"].map(n=><button key={n} onClick={()=>setPostAs(n)} style={{background:postAs===n?(n==="Mom"?"#E07A5F":"#3D405B"):"#f0ebe4",color:postAs===n?"#fff":"#888",border:"none",borderRadius:20,padding:"5px 14px",fontSize:12,cursor:"pointer"}}>{n==="Mom"?"👩":"👨"} {n}</button>)}
+              <div style={{fontSize:11,color:"#aaa",marginBottom:8,fontStyle:"italic"}}>Post a family announcement</div>
+              <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
+                {ALL_POSTERS.map(p=>(
+                  <button key={p.id} onClick={()=>setPostAs(p.id)}
+                    style={{background:postAs===p.id?p.color:"#f0ebe4",color:postAs===p.id?"#fff":"#888",border:"none",borderRadius:20,padding:"5px 12px",fontSize:12,cursor:"pointer",transition:"all 0.15s"}}>
+                    {p.avatar} {p.name}
+                  </button>
+                ))}
               </div>
-              <textarea value={newPost} onChange={e=>setNewPost(e.target.value)} placeholder="Share something with the family…" rows={2} style={{...C.input,marginBottom:10}}/>
-              <button onClick={handlePost} style={{...C.btn("#E07A5F"),float:"right"}}>Share ✉️</button>
+              <textarea value={newPost} onChange={e=>setNewPost(e.target.value)} placeholder={"What's on your mind, "+ALL_POSTERS.find(p=>p.id===postAs)?.name+"?"} rows={2} style={{...C.inp,marginBottom:10}}/>
+              <button onClick={handlePost} style={{...C.btn(ALL_POSTERS.find(p=>p.id===postAs)?.color||"#E07A5F"),float:"right"}}>Share</button>
               <div style={{clear:"both"}}/>
             </div>
 
             {posts.map(p=>(
-              <div key={p._key||p.id} style={{...C.card,borderLeft:`4px solid ${p.color}`}}>
+              <div key={p._key||p.id} style={{...C.card,borderLeft:"4px solid "+p.color}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                   <div style={{width:34,height:34,borderRadius:"50%",background:p.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>{p.avatar}</div>
                   <div><div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B"}}>{p.author}</div><div style={{fontSize:10,color:"#bbb"}}>{p.time}</div></div>
@@ -530,154 +800,17 @@ function App(){
                 </button>
               </div>
             ))}
-          </div>
-        )}
 
-        {/* QUESTS */}
-        {screen==="quest"&&(
-          <div style={{padding:16}}>
-            <div style={{...C.card,background:`linear-gradient(135deg,${kid.color},${kid.color}bb)`,color:"#fff",marginBottom:14}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                <div>
-                  <div style={{fontSize:24}}>{kid.avatar}</div>
-                  <div style={{fontWeight:"bold",fontSize:18,marginTop:2}}>{kid.name} {kid.emoji}</div>
-                  <div style={{fontSize:12,opacity:0.85}}>Level: {kid.level}</div>
-                  <div style={{fontSize:12,marginTop:4}}>{kid.id==="ellie"?"🧸 No-Mess Days:":"🥦 Fruit/Veg:"} {trackDays(kid.id,checks)}/7</div>
-                  <div style={{fontSize:12}}>⚡ Side Quests: {sideCount(kid.id,side)} done</div>
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:32,fontWeight:"bold"}}>{calcPts(kid.id,checks,side)}</div>
-                  <div style={{fontSize:11,opacity:0.85}}>total points</div>
-                  <div style={{fontSize:12,marginTop:4}}>{corePct(kid.id,checks)}% core ✅</div>
-                  {legendEarned(kid.id,checks)&&<div style={{fontSize:11,background:"rgba(255,255,255,0.25)",borderRadius:10,padding:"3px 8px",marginTop:6}}>👑 LEGEND UNLOCKED!</div>}
-                </div>
-              </div>
-              <div style={{background:"rgba(255,255,255,0.25)",borderRadius:8,height:7,marginTop:10}}>
-                <div style={{background:"#fff",height:7,borderRadius:8,width:`${corePct(kid.id,checks)}%`,transition:"width 0.4s"}}/>
-              </div>
-              <div style={{background:"rgba(255,255,255,0.15)",borderRadius:8,height:5,marginTop:4}}>
-                <div style={{background:kid.id==="ellie"?"#F9A8D4":"#86EFAC",height:5,borderRadius:8,width:`${trackDays(kid.id,checks)/7*100}%`,transition:"width 0.4s"}}/>
-              </div>
-              <div style={{fontSize:10,opacity:0.75,marginTop:3}}>{kid.id==="ellie"?"🧸 No-Mess":"🥦 Fruit/Veg"} progress toward Legend Week</div>
-              {parentMode&&<button onClick={()=>toggleApprove(kid.id)} style={{marginTop:10,background:approved[kid.id]?"#10B981":"rgba(255,255,255,0.2)",color:"#fff",border:"none",borderRadius:12,padding:"7px 16px",fontSize:12,cursor:"pointer"}}>{approved[kid.id]?"✓ Parent Approved":"👑 Approve Week"}</button>}
-            </div>
-
-            <div style={{display:"flex",gap:8,marginBottom:14}}>
-              {[["grid","📋 Main Quests"],["side","⚡ Side Quests"]].map(([v,l])=>(
-                <button key={v} onClick={()=>setQuestView(v)} style={{background:questView===v?kid.color:"#f0f0f0",color:questView===v?"#fff":"#888",border:"none",borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer"}}>{l}</button>
-              ))}
-            </div>
-
-            {questView==="grid"&&(
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",minWidth:400}}>
-                  <thead>
-                    <tr>
-                      <th style={{fontSize:11,color:"#6B7280",textAlign:"left",padding:"6px 8px",fontWeight:"normal",minWidth:120}}>Quest</th>
-                      {DAYS.map(d=><th key={d} style={{fontSize:11,color:"#6B7280",textAlign:"center",padding:"6px 3px",fontWeight:"normal",width:36}}>{d}</th>)}
-                      <th style={{fontSize:11,color:"#6B7280",textAlign:"center",padding:"6px 3px",fontWeight:"normal"}}>Pts</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td colSpan={9} style={{fontSize:11,color:kid.color,fontWeight:"bold",padding:"8px 8px 4px"}}>⚔️ MAIN STORY QUESTS (1pt each)</td></tr>
-                    {kid.quests.map((q,qi)=>{
-                      const rp=DAYS.filter(d=>checks[kid.id]?.[q.id]?.[d]).length*q.pts;
-                      return(
-                        <tr key={q.id} style={{background:qi%2===0?"#FAFAFA":"#fff"}}>
-                          <td style={{padding:"8px",fontSize:12,color:"#374151"}}>
-                            <div>{q.icon} {q.label}</div>
-                            <div style={{fontSize:10,color:"#9CA3AF"}}>{q.desc}</div>
-                          </td>
-                          {DAYS.map(d=>(
-                            <td key={d} style={{textAlign:"center",padding:"5px 2px"}}>
-                              <button onClick={()=>toggleCheck(kid.id,q.id,d)}
-                                style={{width:26,height:26,borderRadius:7,border:checks[kid.id]?.[q.id]?.[d]?`2px solid ${kid.color}`:"2px solid #E5E7EB",background:checks[kid.id]?.[q.id]?.[d]?kid.color:"#fff",cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto",color:"#fff"}}>
-                                {checks[kid.id]?.[q.id]?.[d]?"✓":""}
-                              </button>
-                            </td>
-                          ))}
-                          <td style={{textAlign:"center",fontSize:13,fontWeight:"bold",color:kid.color,padding:"5px 3px"}}>{rp}</td>
-                        </tr>
-                      );
-                    })}
-
-                    <tr><td colSpan={9} style={{fontSize:11,color:"#F59E0B",fontWeight:"bold",padding:"10px 8px 4px"}}>⭐ GOLDEN RULES (0.5pt each)</td></tr>
-                    {GOLDEN_RULES.map((r,ri)=>{
-                      const rp=Math.round(DAYS.filter(d=>checks[kid.id]?.[r.id]?.[d]).length*r.pts*10)/10;
-                      return(
-                        <tr key={r.id} style={{background:ri%2===0?"#FFFBEB":"#fff"}}>
-                          <td style={{padding:"8px",fontSize:12,color:"#374151"}}>
-                            <div>⭐ {r.label}</div>
-                            <div style={{fontSize:10,color:"#9CA3AF"}}>{r.desc}</div>
-                          </td>
-                          {DAYS.map(d=>(
-                            <td key={d} style={{textAlign:"center",padding:"5px 2px"}}>
-                              <button onClick={()=>toggleCheck(kid.id,r.id,d)}
-                                style={{width:26,height:26,borderRadius:7,border:checks[kid.id]?.[r.id]?.[d]?"2px solid #F59E0B":"2px solid #E5E7EB",background:checks[kid.id]?.[r.id]?.[d]?"#F59E0B":"#fff",cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto",color:"#fff"}}>
-                                {checks[kid.id]?.[r.id]?.[d]?"✓":""}
-                              </button>
-                            </td>
-                          ))}
-                          <td style={{textAlign:"center",fontSize:13,fontWeight:"bold",color:"#F59E0B",padding:"5px 3px"}}>{rp}</td>
-                        </tr>
-                      );
-                    })}
-
-                    <tr><td colSpan={9} style={{fontSize:11,color:kid.id==="ellie"?"#EC4899":"#22C55E",fontWeight:"bold",padding:"10px 8px 4px"}}>
-                      {kid.id==="ellie"?"🧸 NO-MESS TRACKER (0.5pt/day + 👑 Legend Path)":"🥦 FRUIT & VEG TRACKER (0.5pt/day + 👑 Legend Path)"}
-                    </td></tr>
-                    <tr style={{background:kid.id==="ellie"?"#FDF2F8":"#F0FDF4"}}>
-                      <td style={{padding:"8px",fontSize:12,color:"#374151"}}>
-                        {kid.id==="ellie"?(
-                          <><div>🧸 No Stuffy/Art/Mess Day</div><div style={{fontSize:10,color:"#9CA3AF"}}>No stuffies, art scraps or big messes left out</div><div style={{fontSize:10,color:"#EC4899",marginTop:2}}>7/7 + 100% chores = 👑 Chore-Free Week!</div></>
-                        ):(
-                          <><div>🍎 Daily Serving</div><div style={{fontSize:10,color:"#9CA3AF"}}>1 full serving fruit or veg (not just a bite!)</div><div style={{fontSize:10,color:"#22C55E",marginTop:2}}>7/7 + 100% chores = 👑 Chore-Free Week!</div></>
-                        )}
-                      </td>
-                      {DAYS.map(d=>{
-                        const tid=kid.id==="ellie"?ET_ID:FV_ID,chk=checks[kid.id]?.[tid]?.[d],ac=kid.id==="ellie"?"#EC4899":"#22C55E";
-                        return(
-                          <td key={d} style={{textAlign:"center",padding:"5px 2px"}}>
-                            <button onClick={()=>toggleCheck(kid.id,tid,d)}
-                              style={{width:26,height:26,borderRadius:7,border:chk?`2px solid ${ac}`:"2px solid #E5E7EB",background:chk?ac:"#fff",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto"}}>
-                              {chk?(kid.id==="ellie"?"🧸":"🥦"):""}
-                            </button>
-                          </td>
-                        );
-                      })}
-                      <td style={{textAlign:"center",fontSize:13,fontWeight:"bold",color:kid.id==="ellie"?"#EC4899":"#22C55E",padding:"5px 3px"}}>
-                        {Math.round(trackDays(kid.id,checks)*0.5*10)/10}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {questView==="side"&&(
-              <div>
-                {SIDE_QUESTS.map(cat=>(
-                  <div key={cat.cat} style={{...C.card,borderLeft:`4px solid ${cat.color}`}}>
-                    <div style={{marginBottom:10}}>
-                      <div style={{fontWeight:"bold",fontSize:14,color:cat.color}}>{cat.icon} {cat.cat}</div>
-                      <div style={{fontSize:11,color:"#9CA3AF"}}>{cat.pts} pts each{cat.note?` · ⚠️ ${cat.note}`:""}</div>
+            {activity.length>0&&(
+              <div style={C.card}>
+                <div style={{fontSize:13,fontWeight:"bold",color:"#1E1B4B",marginBottom:10}}>Activity Log</div>
+                {activity.map((a,i)=>(
+                  <div key={a._key||i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"8px 0",borderBottom:i<activity.length-1?"1px solid #F3F4F6":"none"}}>
+                    <div style={{fontSize:16,flexShrink:0}}>{a.icon}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,color:"#374151",lineHeight:1.45}}>{a.text}</div>
+                      <div style={{fontSize:10,color:"#9CA3AF",marginTop:2}}>{a.time}</div>
                     </div>
-                    {cat.quests.map(q=>{
-                      const done=side[kid.id]?.[q.id];
-                      return(
-                        <div key={q.id} onClick={()=>toggleSide(kid.id,q.id,cat.pts)}
-                          style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:"1px solid #F3F4F6",cursor:"pointer"}}>
-                          <div style={{width:26,height:26,borderRadius:8,border:done?`2px solid ${cat.color}`:"2px solid #E5E7EB",background:done?cat.color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,color:"#fff"}}>
-                            {done?"✓":""}
-                          </div>
-                          <div style={{flex:1}}>
-                            <div style={{fontSize:13,color:done?"#9CA3AF":"#374151",textDecoration:done?"line-through":"none"}}>{q.label}</div>
-                            <div style={{fontSize:11,color:"#9CA3AF"}}>{q.desc}</div>
-                          </div>
-                          <div style={{fontSize:12,fontWeight:"bold",color:done?cat.color:"#9CA3AF"}}>+{cat.pts}</div>
-                        </div>
-                      );
-                    })}
                   </div>
                 ))}
               </div>
@@ -685,56 +818,215 @@ function App(){
           </div>
         )}
 
-        {/* LOOT */}
+        {screen==="quest"&&(()=>{
+          const kq=getQ(dynQuests,kid.id);
+          const myPct=corePct(kid.id,checks,dynQuests);
+          const myFv=trackDays(kid.id,checks);
+          return(
+            <div style={{padding:16}}>
+              <div style={{...C.card,background:"linear-gradient(135deg,"+kid.color+","+kid.color+"bb)",color:"#fff",marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                  <div>
+                    <div style={{fontSize:24}}>{kid.avatar}</div>
+                    <div style={{fontWeight:"bold",fontSize:18,marginTop:2}}>{kid.name} {kid.emoji}</div>
+                    <div style={{fontSize:12,opacity:0.85}}>Level: {kid.level}</div>
+                    <div style={{fontSize:12,marginTop:4}}>{kid.id==="ellie"?"No-Mess Days:":"Fruit/Veg:"} {myFv}/7</div>
+                    <div style={{fontSize:12}}>Side Quests: {sideCount(kid.id,side)} done</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:32,fontWeight:"bold"}}>{calcPts(kid.id,checks,side,dynQuests)}</div>
+                    <div style={{fontSize:11,opacity:0.85}}>total points</div>
+                    <div style={{fontSize:12,marginTop:4}}>{myPct}% core</div>
+                    {legendEarned(kid.id,checks,dynQuests)&&<div style={{fontSize:11,background:"rgba(255,255,255,0.25)",borderRadius:10,padding:"3px 8px",marginTop:6}}>LEGEND UNLOCKED!</div>}
+                  </div>
+                </div>
+                <div style={{background:"rgba(255,255,255,0.25)",borderRadius:8,height:7,marginTop:10}}>
+                  <div style={{background:"#fff",height:7,borderRadius:8,width:myPct+"%",transition:"width 0.4s"}}/>
+                </div>
+                <div style={{background:"rgba(255,255,255,0.15)",borderRadius:8,height:5,marginTop:4}}>
+                  <div style={{background:kid.id==="ellie"?"#F9A8D4":"#86EFAC",height:5,borderRadius:8,width:(myFv/7*100)+"%",transition:"width 0.4s"}}/>
+                </div>
+                {parentMode&&<button onClick={()=>toggleApprove(kid.id)} style={{marginTop:10,background:approved[kid.id]?"#10B981":"rgba(255,255,255,0.2)",color:"#fff",border:"none",borderRadius:12,padding:"7px 16px",fontSize:12,cursor:"pointer"}}>{approved[kid.id]?"Approved":"Approve Week"}</button>}
+              </div>
+
+              <div style={{display:"flex",gap:8,marginBottom:14}}>
+                {[["grid","Main Quests"],["side","Side Quests"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setQuestView(v)} style={{background:questView===v?kid.color:"#f0f0f0",color:questView===v?"#fff":"#888",border:"none",borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer"}}>{l}</button>
+                ))}
+              </div>
+
+              {questView==="grid"&&(
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",minWidth:400}}>
+                    <thead>
+                      <tr>
+                        <th style={{fontSize:11,color:"#6B7280",textAlign:"left",padding:"6px 8px",fontWeight:"normal",minWidth:120}}>Quest</th>
+                        {DAYS.map(d=><th key={d} style={{fontSize:11,color:d===currentDay?kid.color:"#6B7280",textAlign:"center",padding:"6px 3px",fontWeight:d===currentDay?"bold":"normal",width:36}}>{d}{d===currentDay?" ◆":""}</th>)}
+                        <th style={{fontSize:11,color:"#6B7280",textAlign:"center",padding:"6px 3px",fontWeight:"normal"}}>Pts</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td colSpan={9} style={{fontSize:11,color:kid.color,fontWeight:"bold",padding:"8px 8px 4px"}}>MAIN STORY QUESTS</td></tr>
+                      {kq.length===0&&<tr><td colSpan={9} style={{fontSize:12,color:"#9CA3AF",padding:"10px 8px",fontStyle:"italic"}}>No quests yet. Parent can add quests in Quest Editor.</td></tr>}
+                      {kq.map((q,qi)=>{
+                        const rp=Math.round(DAYS.filter(d=>checks[kid.id]?.[q.id]?.[d]).length*Number(q.pts||1)*10)/10;
+                        return(
+                          <tr key={q._fbKey||q.id} style={{background:qi%2===0?"#FAFAFA":"#fff"}}>
+                            <td style={{padding:"8px",fontSize:12,color:"#374151"}}>
+                              <div>{q.icon} {q.label}</div>
+                              <div style={{fontSize:10,color:"#9CA3AF"}}>{q.desc}</div>
+                            </td>
+                            {DAYS.map(d=>mkChk(kid.id,q.id,d,kid.color,pending))}
+                            <td style={{textAlign:"center",fontSize:13,fontWeight:"bold",color:kid.color,padding:"5px 3px"}}>{rp}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr><td colSpan={9} style={{fontSize:11,color:"#F59E0B",fontWeight:"bold",padding:"10px 8px 4px"}}>GOLDEN RULES (0.5pt each)</td></tr>
+                      {GOLDEN_RULES.map((r,ri)=>{
+                        const rp=Math.round(DAYS.filter(d=>checks[kid.id]?.[r.id]?.[d]).length*r.pts*10)/10;
+                        return(
+                          <tr key={r.id} style={{background:ri%2===0?"#FFFBEB":"#fff"}}>
+                            <td style={{padding:"8px",fontSize:12,color:"#374151"}}>
+                              <div>{r.label}</div>
+                              <div style={{fontSize:10,color:"#9CA3AF"}}>{r.desc}</div>
+                            </td>
+                            {DAYS.map(d=>{
+                              const isToday=d===currentDay,chk=checks[kid.id]?.[r.id]?.[d];
+                              const isPend=Object.values(pending).some(v=>v.kidId===kid.id&&v.qid===r.id&&v.day===d);
+                              return(
+                                <td key={d} style={{textAlign:"center",padding:"5px 2px"}}>
+                                  <button onClick={()=>toggleCheck(kid.id,r.id,d)} style={{width:26,height:26,borderRadius:7,
+                                    border:chk?"2px solid #F59E0B":isPend?"2px solid #F59E0B":isToday?"2px solid #FCD34D":"2px solid #E5E7EB",
+                                    background:chk?"#F59E0B":isPend?"#FEF3C7":isToday?"#FFFBEB":"#F9FAFB",
+                                    cursor:isToday?"pointer":"default",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto",color:"#fff",
+                                    opacity:!isToday&&!chk&&!isPend?0.4:1}}>
+                                    {chk?"✓":isPend?"⏳":isToday?"·":""}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                            <td style={{textAlign:"center",fontSize:13,fontWeight:"bold",color:"#F59E0B",padding:"5px 3px"}}>{rp}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr><td colSpan={9} style={{fontSize:11,color:kid.id==="ellie"?"#EC4899":"#22C55E",fontWeight:"bold",padding:"10px 8px 4px"}}>
+                        {kid.id==="ellie"?"NO-MESS TRACKER (0.5pt/day + Legend Path)":"FRUIT AND VEG TRACKER (0.5pt/day + Legend Path)"}
+                      </td></tr>
+                      <tr style={{background:kid.id==="ellie"?"#FDF2F8":"#F0FDF4"}}>
+                        <td style={{padding:"8px",fontSize:12,color:"#374151"}}>
+                          {kid.id==="ellie"
+                            ?<><div>No Stuffy/Art/Mess Day</div><div style={{fontSize:10,color:"#9CA3AF"}}>No stuffies, art scraps or big messes left out</div><div style={{fontSize:10,color:"#EC4899",marginTop:2}}>7/7 + 100% chores = Chore-Free Week!</div></>
+                            :<><div>Daily Serving</div><div style={{fontSize:10,color:"#9CA3AF"}}>1 full serving fruit or veg (not just a bite!)</div><div style={{fontSize:10,color:"#22C55E",marginTop:2}}>7/7 + 100% chores = Chore-Free Week!</div></>
+                          }
+                        </td>
+                        {DAYS.map(d=>{
+                          const tid=kid.id==="ellie"?ET_ID:FV_ID,chk=checks[kid.id]?.[tid]?.[d],ac=kid.id==="ellie"?"#EC4899":"#22C55E";
+                          const isToday=d===currentDay;
+                          const isPend=Object.values(pending).some(v=>v.kidId===kid.id&&v.qid===tid&&v.day===d);
+                          return(
+                            <td key={d} style={{textAlign:"center",padding:"5px 2px"}}>
+                              <button onClick={()=>toggleCheck(kid.id,tid,d)} style={{width:26,height:26,borderRadius:7,
+                                border:chk?"2px solid "+ac:isPend?"2px solid #F59E0B":isToday?"2px solid "+ac+"88":"2px solid #E5E7EB",
+                                background:chk?ac:isPend?"#FEF3C7":isToday?"#F0FDF4":"#F9FAFB",
+                                cursor:isToday?"pointer":"default",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto",
+                                opacity:!isToday&&!chk&&!isPend?0.4:1}}>
+                                {chk?(kid.id==="ellie"?"🧸":"🥦"):isPend?"⏳":isToday?"·":""}
+                              </button>
+                            </td>
+                          );
+                        })}
+                        <td style={{textAlign:"center",fontSize:13,fontWeight:"bold",color:kid.id==="ellie"?"#EC4899":"#22C55E",padding:"5px 3px"}}>
+                          {Math.round(myFv*0.5*10)/10}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {questView==="side"&&(
+                <div>
+                  {SIDE_QUESTS.map(cat=>(
+                    <div key={cat.cat} style={{...C.card,borderLeft:"4px solid "+cat.color}}>
+                      <div style={{marginBottom:10}}>
+                        <div style={{fontWeight:"bold",fontSize:14,color:cat.color}}>{cat.icon} {cat.cat}</div>
+                        <div style={{fontSize:11,color:"#9CA3AF"}}>{cat.pts} pts each{cat.note?" - "+cat.note:""}</div>
+                      </div>
+                      {cat.quests.map(q=>{
+                        const done=side[kid.id]?.[q.id];
+                        return(
+                          <div key={q.id} onClick={()=>toggleSide(kid.id,q.id,cat.pts)}
+                            style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:"1px solid #F3F4F6",cursor:"pointer"}}>
+                            <div style={{width:26,height:26,borderRadius:8,border:done?"2px solid "+cat.color:"2px solid #E5E7EB",background:done?cat.color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,color:"#fff"}}>
+                              {done?"✓":""}
+                            </div>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:13,color:done?"#9CA3AF":"#374151",textDecoration:done?"line-through":"none"}}>{q.label}</div>
+                              <div style={{fontSize:11,color:"#9CA3AF"}}>{q.desc}</div>
+                            </div>
+                            <div style={{fontSize:12,fontWeight:"bold",color:done?cat.color:"#9CA3AF"}}>+{cat.pts}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {screen==="loot"&&(
           <div style={{padding:16}}>
             <div style={{background:"linear-gradient(135deg,#78350F,#92400E)",borderRadius:16,padding:14,marginBottom:14,border:"2px solid #F59E0B"}}>
-              <div style={{fontSize:18,marginBottom:4}}>👑 LEGEND WEEK — ULTIMATE REWARD</div>
-              <div style={{fontSize:13,fontWeight:"bold",color:"#FDE68A",marginBottom:6}}>Chore-Free Week!</div>
-              <div style={{fontSize:12,color:"#FCD34D",lineHeight:1.55}}>Complete <b>100% core chores</b> AND <b>daily goal every day (7/7)</b> to earn the entire next week OFF chores!</div>
+              <div style={{fontSize:18,marginBottom:4,color:"#FDE68A",fontWeight:"bold"}}>LEGEND WEEK - ULTIMATE REWARD</div>
+              <div style={{fontSize:12,color:"#FCD34D",lineHeight:1.55}}>Complete 100% core chores AND daily goal every day (7/7) to earn the entire next week OFF chores!</div>
               <div style={{fontSize:11,color:"#FDE68A",marginTop:8,padding:"8px 10px",background:"rgba(0,0,0,0.3)",borderRadius:10}}>
-                ⚠️ During Chore-Free Week you still must:<br/>· Complete <b>5 side quests</b><br/>· Meet your <b>daily goal every day</b>
+                During Chore-Free Week you still must: complete 5 side quests and meet your daily goal every day.
               </div>
               <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
                 {KIDS.map(k=>{
-                  const leg=legendEarned(k.id,checks);
-                  return(<div key={k.id} style={{background:"rgba(0,0,0,0.3)",borderRadius:10,padding:"6px 10px",border:`1px solid ${leg?"#F59E0B":"#374151"}`}}>
+                  const leg=legendEarned(k.id,checks,dynQuests);
+                  return(<div key={k.id} style={{background:"rgba(0,0,0,0.3)",borderRadius:10,padding:"6px 10px",border:"1px solid "+(leg?"#F59E0B":"#374151")}}>
                     <div style={{fontSize:12,color:leg?"#FDE68A":"#9CA3AF"}}>{k.avatar} {k.name}</div>
-                    <div style={{fontSize:10,color:"#9CA3AF"}}>{corePct(k.id,checks)}% · {k.id==="ellie"?"🧸":"🥦"} {trackDays(k.id,checks)}/7</div>
-                    {leg&&<div style={{fontSize:11,color:"#F59E0B",fontWeight:"bold"}}>👑 UNLOCKED!</div>}
+                    <div style={{fontSize:10,color:"#9CA3AF"}}>{corePct(k.id,checks,dynQuests)}% {k.id==="ellie"?"🧸":"🥦"} {trackDays(k.id,checks)}/7</div>
+                    {leg&&<div style={{fontSize:11,color:"#F59E0B",fontWeight:"bold"}}>UNLOCKED!</div>}
                   </div>);
                 })}
               </div>
             </div>
 
             <div style={{...C.card,padding:12,marginBottom:14}}>
-              <div style={{fontSize:13,fontWeight:"bold",color:"#1E1B4B",marginBottom:8}}>🎁 The Loot Table</div>
+              <div style={{fontSize:13,fontWeight:"bold",color:"#1E1B4B",marginBottom:8}}>The Loot Table</div>
               <div style={{display:"flex",gap:6}}>
-                <button onClick={()=>setLootMode("paid")} style={{background:lootMode==="paid"?"#6366F1":"#F3F4F6",color:lootMode==="paid"?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer"}}>💰 Budget Active</button>
-                <button onClick={()=>setLootMode("free")} style={{background:lootMode==="free"?"#10B981":"#F3F4F6",color:lootMode==="free"?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer"}}>🆓 Zero Budget</button>
+                <button onClick={()=>setLootMode("paid")} style={{background:lootMode==="paid"?"#6366F1":"#F3F4F6",color:lootMode==="paid"?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer"}}>Budget Active</button>
+                <button onClick={()=>setLootMode("free")} style={{background:lootMode==="free"?"#10B981":"#F3F4F6",color:lootMode==="free"?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer"}}>Zero Budget</button>
               </div>
             </div>
 
             <div style={{fontSize:11,color:"#9CA3AF",marginBottom:8}}>Redeeming as...</div>
             <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-              {KIDS.map(k=><button key={k.id} onClick={()=>setActiveKid(k.id)} style={{background:activeKid===k.id?k.color:"#F3F4F6",color:activeKid===k.id?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"6px 14px",fontSize:12,cursor:"pointer"}}>{k.avatar} {k.name} · {calcPts(k.id,checks,side)}pts</button>)}
+              {KIDS.map(k=><button key={k.id} onClick={()=>setActiveKid(k.id)} style={{background:activeKid===k.id?k.color:"#F3F4F6",color:activeKid===k.id?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"6px 14px",fontSize:12,cursor:"pointer"}}>{k.avatar} {k.name} {calcPts(k.id,checks,side,dynQuests)}pts</button>)}
             </div>
 
             {(lootMode==="paid"?PAID_REWARDS:FREE_REWARDS).map(reward=>{
-              const myPts=calcPts(activeKid,checks,side),can=reward.isLegend?legendEarned(activeKid,checks):myPts>=reward.pts;
+              const myPts=calcPts(activeKid,checks,side,dynQuests);
+              const myPct=corePct(activeKid,checks,dynQuests);
+              const can=reward.isLegend?legendEarned(activeKid,checks,dynQuests):reward.pctReq!==undefined?myPct>=reward.pctReq:myPts>=reward.pts;
               return(
-                <div key={reward.id} style={{...C.card,borderLeft:`4px solid ${reward.color}`,opacity:can?1:0.5}}>
+                <div key={reward.id} style={{...C.card,borderLeft:"4px solid "+reward.color,opacity:can?1:0.5}}>
                   <div style={{display:"flex",alignItems:"center",gap:12}}>
                     <div style={{fontSize:26}}>{reward.icon}</div>
                     <div style={{flex:1}}>
                       <div style={{fontSize:10,color:reward.color,fontWeight:"bold"}}>{reward.tier.toUpperCase()}</div>
                       <div style={{fontWeight:"bold",fontSize:14,color:"#1E1B4B"}}>{reward.label}</div>
                       <div style={{fontSize:11,color:"#9CA3AF",marginTop:2}}>{reward.sub}</div>
-                      {!reward.isLegend&&<div style={{fontSize:12,color:reward.color,fontWeight:"bold",marginTop:3}}>Costs {reward.pts} pts</div>}
-                      {reward.isLegend&&<div style={{fontSize:11,color:"#F59E0B",marginTop:3}}>Requires: 100% chores + daily goal 7/7</div>}
+                      {reward.pctReq!==undefined&&<div style={{fontSize:12,color:reward.color,fontWeight:"bold",marginTop:3}}>Requires {reward.pctReq}% core chores. You: {myPct}%</div>}
+                      {reward.pts&&!reward.pctReq&&!reward.isLegend&&<div style={{fontSize:12,color:reward.color,fontWeight:"bold",marginTop:3}}>Costs {reward.pts} pts. You: {myPts}pts</div>}
+                      {reward.isLegend&&<div style={{fontSize:11,color:"#F59E0B",marginTop:3}}>Requires 100% chores + daily goal 7/7</div>}
                     </div>
                     <button onClick={()=>redeemReward(reward,activeKid)} style={{background:can?reward.color:"#E5E7EB",color:can?"#fff":"#9CA3AF",border:"none",borderRadius:12,padding:"8px 11px",fontSize:12,cursor:can?"pointer":"default"}}>
-                      {can?"Claim ✨":"🔒"}
+                      {can?"Claim":"Locked"}
                     </button>
                   </div>
                 </div>
@@ -747,7 +1039,7 @@ function App(){
                 {redeemed.map((r,i)=>(
                   <div key={r._key||i} style={{...C.card,display:"flex",gap:10,alignItems:"center",borderLeft:"4px solid #10B981"}}>
                     <div style={{fontSize:22}}>{r.icon}</div>
-                    <div><div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B"}}>{r.label}</div><div style={{fontSize:11,color:"#9CA3AF"}}>{r.avatar} {r.by} · {r.when}</div></div>
+                    <div><div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B"}}>{r.label}</div><div style={{fontSize:11,color:"#9CA3AF"}}>{r.avatar} {r.by} {r.when}</div></div>
                   </div>
                 ))}
               </>
@@ -755,20 +1047,19 @@ function App(){
           </div>
         )}
 
-        {/* CALENDAR */}
         {screen==="calendar"&&(
           <div style={{padding:16}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div style={{fontSize:13,color:"#6B7280",fontStyle:"italic"}}>Upcoming events</div>
-              {parentMode&&<button onClick={()=>setShowAddEv(!showAddEv)} style={C.btn("#6366F1")}>+ Add</button>}
+              {parentMode&&<button onClick={()=>setShowAddEv(!showAddEv)} style={C.btn("#6366F1")}>Add Event</button>}
             </div>
             {showAddEv&&(
               <div style={{...C.card,marginBottom:16}}>
                 <div style={{fontSize:14,fontWeight:"bold",marginBottom:10,color:"#1E1B4B"}}>New Event</div>
                 {[["title","e.g. Doctor appt"],["date","e.g. Jun 15"],["day","e.g. Mon"],["who","e.g. Mom + Dad"]].map(([k,ph])=>(
-                  <input key={k} value={newEv[k]} onChange={e=>setNewEv({...newEv,[k]:e.target.value})} placeholder={ph} style={C.input}/>
+                  <input key={k} value={newEv[k]} onChange={e=>setNewEv({...newEv,[k]:e.target.value})} placeholder={ph} style={C.inp}/>
                 ))}
-                <button onClick={addEvent} style={{...C.btn("#6366F1"),width:"100%",borderRadius:10,padding:"10px"}}>Save ✓</button>
+                <button onClick={addEvent} style={{...C.btn("#6366F1"),width:"100%",borderRadius:10,padding:"10px"}}>Save</button>
               </div>
             )}
             {events.map(ev=>(
@@ -779,17 +1070,16 @@ function App(){
                 </div>
                 <div>
                   <div style={{fontWeight:"bold",fontSize:15,color:"#1E1B4B"}}>{ev.title}</div>
-                  <div style={{fontSize:12,color:"#9CA3AF",marginTop:2}}>👥 {ev.who}</div>
+                  <div style={{fontSize:12,color:"#9CA3AF",marginTop:2}}>{ev.who}</div>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* PHOTOS */}
         {screen==="photos"&&(
           <div style={{padding:16}}>
-            <div style={{fontSize:12,color:"#9CA3AF",marginBottom:14,fontStyle:"italic"}}>Family memories 📸</div>
+            <div style={{fontSize:12,color:"#9CA3AF",marginBottom:14,fontStyle:"italic"}}>Family memories</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               {PHOTOS.map(p=>(
                 <div key={p.id} style={{borderRadius:16,overflow:"hidden",background:p.bg,aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.12)",cursor:"pointer",position:"relative"}}>
@@ -808,7 +1098,6 @@ function App(){
         )}
       </div>
 
-      {/* BOTTOM NAV */}
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:460,background:"#12122A",borderTop:"1px solid #2D2B5A",display:"flex",zIndex:20}}>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>setScreen(t.id)} style={{flex:1,background:"none",border:"none",padding:"11px 4px 9px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:screen===t.id?"#818CF8":"#4B5563"}}>
@@ -821,7 +1110,6 @@ function App(){
     </div>
   );
 }
-
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
