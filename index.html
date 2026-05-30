@@ -22,6 +22,30 @@ input:focus,textarea:focus,select:focus{outline:none;}
 </head>
 <body>
 <div id="root"></div>
+<div id="fallback" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#818CF8;font-family:Georgia,serif;text-align:center;padding:20px;">
+  <div style="font-size:48px">⚔️</div>
+  <div style="font-size:18px;font-weight:bold;margin:12px 0">Townsend Family Quest Board</div>
+  <div id="fallback-msg" style="font-size:13px;color:#4B5563">Loading...</div>
+</div>
+<script>
+  // Hide fallback once React mounts
+  window.addEventListener("load", function() {
+    setTimeout(function() {
+      var root = document.getElementById("root");
+      var fallback = document.getElementById("fallback");
+      if (root && root.children.length > 0) {
+        if (fallback) fallback.style.display = "none";
+      }
+    }, 3000);
+  });
+  // Global error handler to show errors visibly
+  window.onerror = function(msg, src, line, col, err) {
+    var el = document.getElementById("fallback-msg");
+    if (el) el.innerHTML = "Error: " + msg + "<br>Line: " + line;
+    var fallback = document.getElementById("fallback");
+    if (fallback) fallback.style.display = "flex";
+  };
+</script>
 <!-- React -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -44,7 +68,7 @@ input:focus,textarea:focus,select:focus{outline:none;}
 </script>
 <!-- Babel for JSX -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-<script type="text/babel">
+<script type="text/babel" data-presets="react">
 const{useState,useEffect}=React;
 function getCurrentDay(){return["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];}
 function uid(){return Math.random().toString(36).slice(2,9);}
@@ -237,9 +261,8 @@ function App(){
   const toast$=(msg,dur=2500)=>{setToast(msg);setTimeout(()=>setToast(null),dur);};
 
   useEffect(()=>{
-    if(window.__fbReady){setFbReady(true);return;}
-    const h=()=>setFbReady(true);
-    window.addEventListener("fbReady",h);return()=>window.removeEventListener("fbReady",h);
+    // Firebase compat loads synchronously so __fbReady is always true immediately
+    setFbReady(true);
   },[]);
 
   useEffect(()=>{
@@ -248,10 +271,12 @@ function App(){
   },[]);
 
   useEffect(()=>{
-    if(!fbReady)return;
+    if(!window.__db)return;
     const{__db:db,__ref:ref,__onValue:onVal,__push:push,__set:set}=window;
     let loaded=0;
-    const done=()=>{loaded++;if(loaded>=11)setLoading(false);};
+    // Force loading to complete after 6 seconds no matter what
+    const forceLoad=setTimeout(()=>setLoading(false),6000);
+    const done=()=>{loaded++;if(loaded>=11){clearTimeout(forceLoad);setLoading(false);}}; 
     const unsubs=[
       onVal(ref(db,"parentPin"),s=>{
         const v=s.val();
@@ -505,11 +530,11 @@ function App(){
   const kid=KIDS.find(k=>k.id===activeKid);
   const edKid=KIDS.find(k=>k.id===editorKid);
 
-  if(!fbReady||loading)return(
+  if(loading)return(
     <div style={{background:"#0F0F1A",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
       <div style={{fontSize:48}}>⚔️</div>
       <div style={{color:"#818CF8",fontSize:18,fontWeight:"bold"}}>Townsend Family Quest Board</div>
-      <div style={{color:"#4B5563",fontSize:13}}>{fbReady?"Loading quests...":"Connecting..."}</div>
+      <div style={{color:"#4B5563",fontSize:13}}>"Loading quests..."</div>
       <div style={{width:36,height:36,border:"3px solid #312E81",borderTop:"3px solid #818CF8",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
     </div>
   );
