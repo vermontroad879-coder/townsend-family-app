@@ -1018,7 +1018,7 @@ function App(){
             </div>
 
             {parentMode&&(
-              <div style={{background:"linear-gradient(135deg,#1E1B4B,#312E81)"",borderRadius:16,padding:14,marginBottom:14,border:"2px solid #6366F1"}}>
+              <div style={{background:"linear-gradient(135deg,#1E1B4B,#312E81)",borderRadius:16,padding:14,marginBottom:14,border:"2px solid #6366F1"}}>
                 <div style={{display:"flex",gap:6,marginBottom:12}}>
                   <button onClick={()=>setParentTab("approvals")} style={{background:parentTab==="approvals"?"#6366F1":"rgba(255,255,255,0.08)",color:"#fff",border:"none",borderRadius:12,padding:"6px 12px",fontSize:11,cursor:"pointer"}}>
                     Approvals{Object.keys(pending).length>0&&<span style={{background:"#EF4444",color:"#fff",borderRadius:"50%",padding:"0 4px",fontSize:9,marginLeft:3}}>{Object.keys(pending).length}</span>}
