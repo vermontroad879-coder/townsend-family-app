@@ -1165,7 +1165,14 @@ function App(){
 
             {activity.length>0&&(
               <div style={C.card}>
-                <div style={{fontSize:13,fontWeight:"bold",color:"#1E1B4B",marginBottom:10}}>Activity Log</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div style={{fontSize:13,fontWeight:"bold",color:"#1E1B4B"}}>Activity Log</div>
+                  {parentMode&&<button onClick={function(){
+                    var db=window.__db;var ref=window.__ref;var set=window.__set;
+                    set(ref(db,"activity"),null);
+                    toast$("Activity log cleared 🗑️");
+                  }} style={{background:"rgba(239,68,68,0.15)",color:"#FCA5A5",border:"1px solid #EF4444",borderRadius:10,padding:"4px 12px",fontSize:11,cursor:"pointer"}}>Clear</button>}
+                </div>
                 {activity.map((a,i)=>(
                   <div key={a._key||i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"8px 0",borderBottom:i<activity.length-1?"1px solid #F3F4F6":"none"}}>
                     <div style={{fontSize:16,flexShrink:0}}>{a.icon}</div>
