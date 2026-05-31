@@ -317,7 +317,13 @@ function App(){
         setChecks(out);done();
       }),
       onVal(ref(db,"sideChecks"),s=>{setSide(mergeSide(s.val()));done();}),
-      onVal(ref(db,"pending"),   s=>{setPending(s.val()||{});done();}),
+      onVal(ref(db,"pending"),s=>{
+        const v=s.val()||{};
+        // Filter out any null entries Firebase might return
+        const clean={};
+        Object.entries(v).forEach(([k,val])=>{if(val&&val.kidId)clean[k]=val;});
+        setPending(clean);done();
+      }),
       onVal(ref(db,"activity"),  s=>{
         const v=s.val();
         if(v){const arr=Object.entries(v).map(([k,x])=>({...x,_key:k}));arr.sort((a,b)=>(b.ts||0)-(a.ts||0));setActivity(arr.slice(0,15));}
@@ -438,7 +444,7 @@ function App(){
     var set=window.__set;
     if(!confirmDel)return;
     set(ref(db,"dynamicQuests/"+confirmDel.kidId+"/"+confirmDel.qid),null);
-    logActivity("Removed quest from "+KIDS.find(k=>k.id===confirmDel.kidId).name+": "+confirmDel.label,"🗑️");
+    logActivity("Removed quest from "+KIDS.find(k=>k.id===(confirmDel&&confirmDel.kidId)).name+": "+confirmDel.label,"🗑️");
     toast$("Quest deleted");
     setConfirmDel(null);
     if(choreForm.editKey===confirmDel.qid)setChoreForm(BF);
@@ -453,7 +459,7 @@ function App(){
     const k=KIDS.find(x=>x.id===kid);
     const allQ=[...getQ(dynQuests,kid),...GOLDEN_RULES,{id:kid==="ellie"?ET_ID:FV_ID,label:kid==="ellie"?"No Mess Day":"Daily Fruit/Veg",pts:0.5}];
     const q=allQ.find(x=>x.id===qid)||{label:String(qid),pts:1};
-    const existing=Object.entries(pending).find(([,v])=>v.kidId===kid&&v.qid===qid&&v.day===day);
+    const existing=Object.entries(pending).find(([,v])=>v&&v.kidId===kid&&v.qid===qid&&v.day===day);
     if(existing){set(ref(db,"pending/"+existing[0]),null);toast$("Removed from pending");return;}
     if(checks[kid]?.[qid]?.[day]){set(ref(db,"checks/"+kid+"/"+qid+"/"+day),false);return;}
     push(ref(db,"pending"),{kidId:kid,kidName:k.name,kidAvatar:k.avatar,kidColor:k.color,qid,qLabel:q.label,day,pts:q.pts,ts:Date.now()});
@@ -649,7 +655,7 @@ function App(){
                             </td>
                             {DAYS.map(d=>{
                               const isToday=d===currentDay,chk=checks[kid.id]?.[r.id]?.[d];
-                              const isPend=Object.values(pending).some(v=>v.kidId===kid.id&&v.qid===r.id&&v.day===d);
+                              const isPend=Object.values(pending).some(v=>v&&v.kidId===kid.id&&v.qid===r.id&&v.day===d);
                               return(
                                 <td key={d} style={{textAlign:"center",padding:"5px 2px"}}>
                                   <button onClick={()=>toggleCheck(kid.id,r.id,d)} style={{width:26,height:26,borderRadius:7,
@@ -679,7 +685,7 @@ function App(){
                         {DAYS.map(d=>{
                           const tid=kid.id==="ellie"?ET_ID:FV_ID,chk=checks[kid.id]?.[tid]?.[d],ac=kid.id==="ellie"?"#EC4899":"#22C55E";
                           const isToday=d===currentDay;
-                          const isPend=Object.values(pending).some(v=>v.kidId===kid.id&&v.qid===tid&&v.day===d);
+                          const isPend=Object.values(pending).some(v=>v&&v.kidId===kid.id&&v.qid===tid&&v.day===d);
                           return(
                             <td key={d} style={{textAlign:"center",padding:"5px 2px"}}>
                               <button onClick={()=>toggleCheck(kid.id,tid,d)} style={{width:26,height:26,borderRadius:7,
@@ -739,7 +745,7 @@ function App(){
 
   const mkChk=(kid,qid,day,color,pending)=>{
     const isToday=day===currentDay,chk=checks[kid]?.[qid]?.[day];
-    const isPend=Object.values(pending).some(v=>v.kidId===kid&&v.qid===qid&&v.day===day);
+    const isPend=Object.values(pending).some(v=>v&&v.kidId===kid&&v.qid===qid&&v.day===day);
     return(
       <td key={day} style={{textAlign:"center",padding:"5px 2px"}}>
         <button onClick={()=>toggleCheck(kid,qid,day)} style={{width:26,height:26,borderRadius:7,
@@ -798,7 +804,7 @@ function App(){
           <div style={{background:"#1A1A2E",borderRadius:20,padding:24,width:"100%",maxWidth:340,border:"2px solid #EF4444",textAlign:"center"}}>
             <div style={{fontSize:20,marginBottom:8}}>🗑️</div>
             <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:15,marginBottom:8}}>Delete Quest?</div>
-            <div style={{color:"#9CA3AF",fontSize:13,marginBottom:20}}>"{confirmDel&&confirmDel.label||""}" will be removed from {KIDS.find(k=>k.id===confirmDel.kidId)?.name}s list.</div>
+            <div style={{color:"#9CA3AF",fontSize:13,marginBottom:20}}>"{confirmDel&&confirmDel.label||""}" will be removed from {KIDS.find(k=>k.id===(confirmDel&&confirmDel.kidId))?.name}s list.</div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setConfirmDel(null)} style={{flex:1,background:"rgba(255,255,255,0.08)",color:"#9CA3AF",border:"none",borderRadius:12,padding:"11px",fontSize:13,cursor:"pointer"}}>Cancel</button>
               <button onClick={confirmDelete} style={{flex:1,background:"#EF4444",color:"#fff",border:"none",borderRadius:12,padding:"11px",fontSize:13,cursor:"pointer",fontWeight:"bold"}}>Delete</button>
@@ -918,7 +924,7 @@ function App(){
                     <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:13,marginBottom:8}}>Approvals Queue</div>
                     {Object.keys(pending).length===0
                       ?<div style={{color:"#4B5563",fontSize:13,fontStyle:"italic",textAlign:"center",padding:"10px 0"}}>All clear! No chores awaiting approval.</div>
-                      :Object.entries(pending).map(([pkey,entry])=>(
+                      :Object.entries(pending).filter(([,e])=>e&&e.kidId).map(([pkey,entry])=>(
                         <div key={pkey} style={{background:"rgba(255,255,255,0.07)",borderRadius:12,padding:"10px 12px",marginBottom:8,borderLeft:"3px solid "+(entry.kidColor||"#6366F1")}}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                             <div>
