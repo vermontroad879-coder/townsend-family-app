@@ -1158,9 +1158,16 @@ function App(){
                   <div><div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B"}}>{p.author}</div><div style={{fontSize:10,color:"#bbb"}}>{p.time}</div></div>
                 </div>
                 <div style={{fontSize:14,color:"#374151",lineHeight:1.55}}>{p.text}</div>
-                <button onClick={()=>toggleLike(p._key)} style={{marginTop:8,background:"none",border:"1px solid #e8ddd4",borderRadius:20,padding:"4px 12px",fontSize:12,cursor:"pointer",color:liked[p._key]?"#E07A5F":"#bbb"}}>
-                  {liked[p._key]?"❤️":"🤍"} {p.likes||0}
-                </button>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:8}}>
+                  <button onClick={()=>toggleLike(p._key)} style={{background:"none",border:"1px solid #e8ddd4",borderRadius:20,padding:"4px 12px",fontSize:12,cursor:"pointer",color:liked[p._key]?"#E07A5F":"#bbb"}}>
+                    {liked[p._key]?"❤️":"🤍"} {p.likes||0}
+                  </button>
+                  {parentMode&&<button onClick={function(){
+                    var db=window.__db;var ref=window.__ref;var set=window.__set;
+                    set(ref(db,"posts/"+p._key),null);
+                    toast$("Post deleted 🗑️");
+                  }} style={{background:"rgba(239,68,68,0.15)",color:"#FCA5A5",border:"1px solid #EF4444",borderRadius:20,padding:"4px 12px",fontSize:12,cursor:"pointer"}}>🗑️ Delete</button>}
+                </div>
               </div>
             ))}
 
