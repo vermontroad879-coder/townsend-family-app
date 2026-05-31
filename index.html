@@ -137,19 +137,32 @@ const SIDE_QUESTS=[
 ];
 
 const PAID_REWARDS=[
-  {id:"r1",tier:"Grand Prize",label:"Xbox Game / Add-On",sub:"100% Core Chores completed",icon:"🎮",color:"#6366F1",pctReq:100},
-  {id:"r2",tier:"Mid Prize",  label:"Amazon Item up to $10",sub:"75% Core Chores completed",icon:"📦",color:"#10B981",pctReq:75},
-  {id:"r3",tier:"Base Prize", label:"$5 Cash",           sub:"50% Core Chores completed",icon:"💵",color:"#F59E0B",pctReq:50},
+  // Grand Prize requires full Legend: 100% core + hygiene + fruit/veg + reading every day
+  {id:"r1",tier:"Grand Prize",label:"Xbox Game or New Release Movie",
+   sub:"Full Legend Week: 100% chores + teeth x2/day + bath every other day + fruit/veg + 20 min reading every day",
+   icon:"🎮",color:"#6366F1",isGrand:true},
+  {id:"r2",tier:"Mid Prize",  label:"Amazon Item up to $10",
+   sub:"60% of core chores completed this week",
+   icon:"📦",color:"#10B981",pctReq:60},
+  {id:"r3",tier:"Base Prize", label:"$5 Cash",
+   sub:"Just 30% of core chores — a few chores gets you there!",
+   icon:"💵",color:"#F59E0B",pctReq:30},
 ];
+// FREE REWARDS use freePts = calcPts * 3
+// So 1 chore (1 raw pt) = 3 free pts. Daily rewards ~3-6, weekly ~9-15.
 const FREE_REWARDS=[
-  {id:"r4",tier:"Screen Lord",    label:"Extra Xbox Time",          sub:"+1 hour gaming session",              pts:25,icon:"🎮",color:"#6366F1"},
-  {id:"r5",tier:"The Director",   label:"Pick Tonight Movie or Show",sub:"Choose the living room TV tonight",  pts:20,icon:"🎬",color:"#EC4899"},
-  {id:"r6",tier:"Free Pass",      label:"Skip One Chore",           sub:"Skip any 1 chore next week",          pts:30,icon:"🎟️",color:"#10B981"},
-  {id:"r7",tier:"Sugar Rush",     label:"Fave Snack Sweet or Drink", sub:"Pick any treat - candy, soda, snack",pts:20,icon:"🍬",color:"#F472B6"},
-  {id:"r8",tier:"Sleep In",       label:"30 Min Extra Sleep",        sub:"Later bedtime tonight",              pts:20,icon:"🌙",color:"#8B5CF6"},
-  {id:"r9",tier:"LEGEND WEEK",    label:"Chore-Free Week!",
+  // Daily rewards — earnable with just 1-2 chores
+  {id:"r4",tier:"Daily — 1 Chore",   label:"Fave Snack, Sweet or Drink",sub:"Do just 1 chore to earn this today!", freePts:3, icon:"🍬",color:"#F472B6"},
+  {id:"r5",tier:"Daily — 1 Chore",   label:"30 Min Extra Screen Time",  sub:"1 chore earns you extra screen time!", freePts:3, icon:"📱",color:"#6366F1"},
+  {id:"r6",tier:"Daily — 2 Chores",  label:"Pick Tonight Movie or Show", sub:"2 chores and you pick what we watch!", freePts:6, icon:"🎬",color:"#EC4899"},
+  {id:"r7",tier:"Daily — 2 Chores",  label:"30 Min Extra Sleep",         sub:"Stay up a little later tonight",        freePts:6, icon:"🌙",color:"#8B5CF6"},
+  // Weekly rewards — a few days of chores
+  {id:"r8",tier:"Weekly — 3 Chores", label:"Extra Xbox Session",         sub:"A full extra gaming session",           freePts:9, icon:"🎮",color:"#6366F1"},
+  {id:"r9",tier:"Weekly — 4 Chores", label:"Skip One Chore Next Week",   sub:"Bank a chore skip for next week",       freePts:12,icon:"🎟️",color:"#10B981"},
+  {id:"r10",tier:"Weekly — 5 Chores",label:"Friend Over or Sleepover",   sub:"Invite a friend with 5 chores done",    freePts:15,icon:"👫",color:"#F59E0B"},
+  {id:"r11",tier:"LEGEND WEEK",      label:"Chore-Free Week!",
    sub:"100% chores + daily goal every day = week off (still 5 side quests + daily goal)",
-   pts:999,icon:"👑",color:"#F59E0B",isLegend:true},
+   freePts:999,icon:"👑",color:"#F59E0B",isLegend:true},
 ];
 
 const PHOTOS=[
@@ -179,6 +192,11 @@ function calcPts(kid,checks,side,dq){
   SIDE_QUESTS.forEach(c=>c.quests.forEach(q=>{if(side[kid]?.[q.id])p+=c.pts;}));
   return Math.round(p*10)/10;
 }
+// Free points = raw points x 3 (so 1 chore = 3 free pts)
+function calcFreePts(kid,checks,side,dq){
+  return Math.round(calcPts(kid,checks,side,dq)*3*10)/10;
+}
+
 function corePct(kid,checks,dq){
   const qs=getQ(dq,kid);if(!qs.length||!checks[kid])return 0;
   let t=0,d=0;
@@ -535,10 +553,16 @@ function App(){
     var push=window.__push;
     if(reward.isLegend){
       if(!legendEarned(kid,checks,dynQuests)){toast$("Complete ALL core chores + daily goal to unlock!",3000);return;}
+    } else if(reward.isGrand){
+      // Grand prize requires full legend week requirements
+      if(!legendEarned(kid,checks,dynQuests)){toast$("Grand Prize needs a full Legend Week to unlock! 🏆",3000);return;}
     } else if(reward.pctReq!==undefined){
       const pct=corePct(kid,checks,dynQuests);
-      if(pct<reward.pctReq){toast$("Need "+reward.pctReq+"% core chores! Currently "+pct+"%",3000);return;}
-    } else {
+      if(pct<reward.pctReq){toast$("Need "+reward.pctReq+"% core chores! Currently at "+pct+"%",3000);return;}
+    } else if(reward.freePts!==undefined){
+      const fp=calcFreePts(kid,checks,side,dynQuests);
+      if(fp<reward.freePts){toast$("Need "+(reward.freePts-fp)+" more free pts! Do some chores!",2500);return;}
+    } else if(reward.pts!==undefined){
       const pts=calcPts(kid,checks,side,dynQuests);
       if(pts<reward.pts){toast$("Need "+(reward.pts-pts).toFixed(1)+" more pts!");return;}
     }
@@ -1115,24 +1139,33 @@ function App(){
 
             <div style={{fontSize:11,color:"#9CA3AF",marginBottom:8}}>Redeeming as...</div>
             <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-              {KIDS.map(k=><button key={k.id} onClick={()=>setActiveKid(k.id)} style={{background:activeKid===k.id?k.color:"#F3F4F6",color:activeKid===k.id?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"6px 14px",fontSize:12,cursor:"pointer"}}>{k.avatar} {k.name} {calcPts(k.id,checks,side,dynQuests)}pts</button>)}
+              {KIDS.map(k=>{const kfp=calcFreePts(k.id,checks,side,dynQuests);return(<button key={k.id} onClick={()=>setActiveKid(k.id)} style={{background:activeKid===k.id?k.color:"#F3F4F6",color:activeKid===k.id?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"6px 10px",fontSize:11,cursor:"pointer"}}>{k.avatar} {k.name}<span style={{display:"block",fontSize:9,opacity:0.85}}>{lootMode==="free"?kfp+" free pts":corePct(k.id,checks,dynQuests)+"% done"}</span></button>);})}
             </div>
 
             {(lootMode==="paid"?PAID_REWARDS:FREE_REWARDS).map(reward=>{
               const myPts=calcPts(activeKid,checks,side,dynQuests);
+              const myFp=calcFreePts(activeKid,checks,side,dynQuests);
               const myPct=corePct(activeKid,checks,dynQuests);
-              const can=reward.isLegend?legendEarned(activeKid,checks,dynQuests):reward.pctReq!==undefined?myPct>=reward.pctReq:myPts>=reward.pts;
+              const can=reward.isLegend||reward.isGrand
+                ? legendEarned(activeKid,checks,dynQuests)
+                : reward.pctReq!==undefined
+                  ? myPct>=reward.pctReq
+                  : reward.freePts!==undefined
+                    ? myFp>=reward.freePts
+                    : myPts>=(reward.pts||0);
+              const needed=reward.freePts!==undefined?Math.max(0,reward.freePts-myFp):0;
+              const choreNeeded=Math.ceil(needed/3);
               return(
-                <div key={reward.id} style={{...C.card,borderLeft:"4px solid "+reward.color,opacity:can?1:0.5}}>
+                <div key={reward.id} style={{...C.card,borderLeft:"4px solid "+reward.color,opacity:can?1:0.6}}>
                   <div style={{display:"flex",alignItems:"center",gap:12}}>
                     <div style={{fontSize:26}}>{reward.icon}</div>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:10,color:reward.color,fontWeight:"bold"}}>{(reward.tier||'').toUpperCase()}</div>
+                      <div style={{fontSize:10,color:reward.color,fontWeight:"bold"}}>{(reward.tier||"").toUpperCase()}</div>
                       <div style={{fontWeight:"bold",fontSize:14,color:"#1E1B4B"}}>{reward.label}</div>
                       <div style={{fontSize:11,color:"#9CA3AF",marginTop:2}}>{reward.sub}</div>
-                      {reward.pctReq!==undefined&&<div style={{fontSize:12,color:reward.color,fontWeight:"bold",marginTop:3}}>Requires {reward.pctReq}% core chores. You: {myPct}%</div>}
-                      {reward.pts&&!reward.pctReq&&!reward.isLegend&&<div style={{fontSize:12,color:reward.color,fontWeight:"bold",marginTop:3}}>Costs {reward.pts} pts. You: {myPts}pts</div>}
-                      {reward.isLegend&&<div style={{fontSize:11,color:"#F59E0B",marginTop:3}}>Requires 100% chores + daily goal 7/7</div>}
+                      {(reward.isGrand||reward.isLegend)&&<div style={{fontSize:11,color:reward.color,marginTop:3}}>Requires full Legend Week</div>}
+                      {reward.pctReq!==undefined&&<div style={{fontSize:12,color:reward.color,fontWeight:"bold",marginTop:3}}>{myPct}% done this week — need {reward.pctReq}%</div>}
+                      {reward.freePts!==undefined&&<div style={{fontSize:12,color:can?"#10B981":reward.color,fontWeight:"bold",marginTop:3}}>{can?"Ready to claim!":"Do "+choreNeeded+" more chore"+(choreNeeded===1?"":"s")+" ("+myFp+" / "+reward.freePts+" free pts)"}</div>}
                     </div>
                     <button onClick={()=>redeemReward(reward,activeKid)} style={{background:can?reward.color:"#E5E7EB",color:can?"#fff":"#9CA3AF",border:"none",borderRadius:12,padding:"8px 11px",fontSize:12,cursor:can?"pointer":"default"}}>
                       {can?"Claim":"Locked"}
@@ -1140,22 +1173,23 @@ function App(){
                   </div>
                 </div>
               );
-            })}
+            })}>
 
             {redeemed.length>0&&(
               <>
                 <div style={{fontSize:12,color:"#9CA3AF",margin:"16px 0 8px",fontStyle:"italic"}}>Recently claimed</div>
-                {redeemed.map((r,i)=>(
+                {redeemed.map(function(r,i){return(
                   <div key={r._key||i} style={{...C.card,display:"flex",gap:10,alignItems:"center",borderLeft:"4px solid #10B981"}}>
                     <div style={{fontSize:22}}>{r.icon}</div>
                     <div><div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B"}}>{r.label}</div><div style={{fontSize:11,color:"#9CA3AF"}}>{r.avatar} {r.by} {r.when}</div></div>
                   </div>
-                ))}
+                );})}
               </>
             )}
           </div>
         )}
 
+        {/* CALENDAR */}
         {screen==="calendar"&&(
           <div style={{padding:16}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
@@ -1186,28 +1220,6 @@ function App(){
           </div>
         )}
 
-        {screen==="photos"&&(
-          <div style={{padding:16}}>
-            <div style={{fontSize:12,color:"#9CA3AF",marginBottom:14,fontStyle:"italic"}}>Family memories</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              {PHOTOS.map(p=>(
-                <div key={p.id} style={{borderRadius:16,overflow:"hidden",background:p.bg,aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.12)",cursor:"pointer",position:"relative"}}>
-                  <div style={{fontSize:44}}>{p.emoji}</div>
-                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.32)",color:"#fff",padding:"8px 10px",fontSize:12}}>
-                    <div style={{fontWeight:"bold"}}>{p.label}</div>
-                    <div style={{opacity:0.8,fontSize:11}}>by {p.author}</div>
-                  </div>
-                </div>
-              ))}
-              <div style={{borderRadius:16,border:"2px dashed #374151",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#4B5563",gap:6}}>
-                <div style={{fontSize:28}}>+</div><div style={{fontSize:12}}>Add Memory</div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-
         {/* GUIDE SCREEN */}
         {screen==="guide"&&(
           <div style={{padding:16}}>
@@ -1234,14 +1246,13 @@ function App(){
                   <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:17,marginBottom:4}}>Your Quest Guide</div>
                   <div style={{color:"#818CF8",fontSize:12,fontStyle:"italic"}}>Complete quests, earn points, claim rewards!</div>
                 </div>
-
                 <div style={{background:"#fff",borderRadius:16,padding:14,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
-                  <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:10}}>📋 Your Chores</div>
+                  <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:10}}>Your Chores</div>
                   {[
                     {avatar:"🧑",name:"Jude",color:"#6366F1",chores:["Daily Trash Duty","Monday — Bins to Curb","Dishes Rotation","Daily Room Tidying","Eat fruit or veg daily"]},
                     {avatar:"👦",name:"Blake",color:"#10B981",chores:["Daily Recycling Duty","Sunday — Recycling to Curb","Dishes Rotation","Daily Room Tidying","Eat fruit or veg daily"]},
-                    {avatar:"👧",name:"Avery",color:"#F59E0B",chores:["Kitchen Assist — dry and put away dishes","Daily Room Tidying","Eat fruit or veg daily"]},
-                    {avatar:"🧒",name:"Ellie",color:"#EC4899",chores:["Daily Room Tidying","No stuffies, art scraps or big messes left out"]},
+                    {avatar:"👧",name:"Avery",color:"#F59E0B",chores:["Kitchen Assist","Daily Room Tidying","Eat fruit or veg daily"]},
+                    {avatar:"🧒",name:"Ellie",color:"#EC4899",chores:["Daily Room Tidying","No stuffies or art scraps left out"]},
                   ].map(function(k){return(
                     <div key={k.name} style={{marginBottom:10,borderLeft:"3px solid "+k.color,paddingLeft:10}}>
                       <div style={{fontWeight:"bold",fontSize:13,color:k.color,marginBottom:4}}>{k.avatar} {k.name}</div>
@@ -1249,7 +1260,6 @@ function App(){
                     </div>
                   );})}
                 </div>
-
                 <div style={{background:"#fff",borderRadius:16,padding:14,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
                   <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:10}}>How to Complete a Quest</div>
                   {[["1","Tap your name tab at the top"],["2","Tap Quests at the bottom, then Main Quests"],["3","Tap today's box (marked with a diamond) when you finish a chore"],["4","It turns yellow — waiting for a parent to approve"],["5","Once approved it turns green and your points go up!"],["6","Tap Side Quests for bonus points anytime"],["7","Go to Loot and claim your reward when ready!"]].map(function(s){return(
@@ -1259,10 +1269,9 @@ function App(){
                     </div>
                   );})}
                 </div>
-
                 <div style={{background:"#fff",borderRadius:16,padding:14,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
-                  <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:10}}>Free Rewards You Can Earn</div>
-                  {[["Extra Xbox Time","25 pts","🎮"],["Pick Tonight Movie","20 pts","🎬"],["Fave Snack or Treat","20 pts","🍬"],["Skip One Chore","30 pts","🎟️"],["30 Min Extra Sleep","20 pts","🌙"]].map(function(r){return(
+                  <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:10}}>Free Rewards — Earn Daily!</div>
+                  {[["Fave Snack or Treat","1 chore","🍬"],["30 Min Extra Screen Time","1 chore","📱"],["Pick Tonight Movie","2 chores","🎬"],["30 Min Extra Sleep","2 chores","🌙"],["Extra Xbox Session","3 chores","🎮"],["Skip One Chore Next Week","4 chores","🎟️"],["Friend Over or Sleepover","5 chores","👫"]].map(function(r){return(
                     <div key={r[0]} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderBottom:"1px solid #F3F4F6"}}>
                       <div style={{fontSize:20}}>{r[2]}</div>
                       <div style={{flex:1,fontSize:13,color:"#374151"}}>{r[0]}</div>
@@ -1270,16 +1279,9 @@ function App(){
                     </div>
                   );})}
                 </div>
-
-                <div style={{background:"linear-gradient(135deg,#FDF2F8,#FEF3C7)",borderRadius:14,padding:12,marginBottom:12,border:"1px solid #F9A8D4"}}>
-                  <div style={{fontWeight:"bold",fontSize:13,color:"#BE185D",marginBottom:4}}>Messaging Mom and Dad</div>
-                  <div style={{fontSize:12,color:"#6B7280",lineHeight:1.55}}>Tap the Mom or Dad button in the top right corner. Pick your name, type your message, and tap Send.</div>
-                </div>
-
                 <div style={{background:"linear-gradient(135deg,#78350F,#92400E)",borderRadius:14,padding:14,border:"2px solid #F59E0B"}}>
-                  <div style={{color:"#FDE68A",fontWeight:"bold",fontSize:14,textAlign:"center",marginBottom:6}}>Legend Week — Ultimate Reward</div>
-                  <div style={{color:"#FCD34D",fontSize:12,lineHeight:1.6,textAlign:"center"}}>Complete 100% of your core chores AND eat a full serving of fruit or veg every day of the week to earn the entire next week OFF chores!</div>
-                  <div style={{color:"#FDE68A",fontSize:11,marginTop:8,padding:"8px",background:"rgba(0,0,0,0.3)",borderRadius:8,textAlign:"center"}}>During your free week: still do 5 side quests and keep up your daily goal</div>
+                  <div style={{color:"#FDE68A",fontWeight:"bold",fontSize:14,textAlign:"center",marginBottom:6}}>Grand Prize — Xbox Game or New Movie</div>
+                  <div style={{color:"#FCD34D",fontSize:12,lineHeight:1.6,textAlign:"center"}}>Earn the big prize with a full Legend Week: 100% core chores + brush teeth morning and night + bath or shower every other day + fruit or veg daily + 20 minutes reading every day!</div>
                 </div>
               </div>
             )}
@@ -1291,16 +1293,14 @@ function App(){
                   <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:17,marginBottom:4}}>Parent Guide</div>
                   <div style={{color:"#818CF8",fontSize:12,fontStyle:"italic"}}>Everything you need to manage the app</div>
                 </div>
-
                 <div style={{background:"#EEF2FF",borderRadius:16,padding:14,marginBottom:12,border:"2px solid #6366F1"}}>
                   <div style={{fontWeight:"bold",fontSize:13,color:"#4338CA",marginBottom:6}}>Parent Mode PIN</div>
                   <div style={{fontSize:30,fontWeight:"bold",color:"#6366F1",fontFamily:"monospace",letterSpacing:8,marginBottom:6}}>1234</div>
-                  <div style={{fontSize:12,color:"#6B7280",lineHeight:1.5}}>Tap the Lock button (top right) and enter this PIN. Change it anytime inside Parent Mode, then the PIN tab. Syncs to all devices.</div>
+                  <div style={{fontSize:12,color:"#6B7280",lineHeight:1.5}}>Tap the Lock button (top right) and enter this PIN. Change it in Parent Mode, then the PIN tab.</div>
                 </div>
-
                 {[
-                  {title:"Approving Chores",color:"#10B981",steps:["When a kid taps a chore it shows yellow — waiting for your approval","The Lock button shows a red badge with how many are waiting","Enter your PIN, go to Home tab, tap Approvals","Tap Approve to confirm and award points, or Deny to send it back"]},
-                  {title:"Adding or Editing Chores",color:"#6366F1",steps:["Enter Parent Mode, Home tab, tap Quest Editor","Pick a kid from the dropdown","Fill in chore name, description, points, and emoji, then tap Add Quest","To edit tap Edit, to remove tap Del and confirm","Changes sync instantly to all devices"]},
+                  {title:"Approving Chores",color:"#10B981",steps:["When a kid taps a chore it turns yellow — waiting for your approval","The Lock button shows a red badge with how many are waiting","Enter your PIN, go to Home tab, tap Approvals","Tap Approve to confirm and award points, or Deny to send it back"]},
+                  {title:"Adding or Editing Chores",color:"#6366F1",steps:["Enter Parent Mode, Home tab, tap Quest Editor","Pick a kid from the dropdown","Fill in chore name, description, points, and emoji, then tap Add Quest","To edit tap Edit, to remove tap Del and confirm"]},
                   {title:"Weekly Reset",color:"#F59E0B",steps:["Enter Parent Mode — Reset Week button appears in the kid tabs","Tap it at the start of each week to clear all checkboxes","Points and redeemed rewards are kept — only the chore grid resets"]},
                 ].map(function(sec){return(
                   <div key={sec.title} style={{background:"#fff",borderRadius:16,padding:14,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
@@ -1313,25 +1313,25 @@ function App(){
                     );})}
                   </div>
                 );})}
-
                 <div style={{background:"#fff",borderRadius:16,padding:14,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
                   <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:10}}>Points Reference</div>
-                  {[["Core chores","1 pt each"],["Golden Rules","0.5 pt each per day"],["Fruit, veg or no-mess","0.5 pt per day"],["Side quests","1 to 1.5 pts each"],["Paid rewards unlock at","50%, 75%, 100% core"]].map(function(r){return(
+                  {[["Core chores","1 pt each"],["Golden Rules","0.5 pt each per day"],["Fruit, veg or no-mess","0.5 pt per day"],["Side quests","1 to 1.5 pts each"],["Free reward pts","raw pts x 3 (1 chore = 3 free pts)"],["Paid rewards unlock at","30%, 60%, or full Legend Week"]].map(function(r){return(
                     <div key={r[0]} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #F3F4F6",fontSize:12}}>
                       <span style={{color:"#374151"}}>{r[0]}</span>
                       <span style={{color:"#6366F1",fontWeight:"bold"}}>{r[1]}</span>
                     </div>
                   );})}
                 </div>
-
                 <div style={{background:"#FEF3C7",borderRadius:14,padding:12,border:"1px solid #F59E0B"}}>
                   <div style={{fontWeight:"bold",fontSize:12,color:"#92400E",marginBottom:4}}>Day Locking</div>
-                  <div style={{fontSize:12,color:"#92400E",lineHeight:1.55}}>Kids can only check off chores for today's date (marked with a diamond). Past days are locked — they cannot go back and fill in missed days.</div>
+                  <div style={{fontSize:12,color:"#92400E",lineHeight:1.55}}>Kids can only check off chores for today. Past days are locked — they cannot go back and fill in missed days.</div>
                 </div>
               </div>
             )}
           </div>
         )}
+
+      </div>
 
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:460,background:"#12122A",borderTop:"1px solid #2D2B5A",display:"flex",zIndex:20}}>
         {TABS.map(t=>(
