@@ -260,6 +260,9 @@ function App(){
   const[msgFrom,setMsgFrom]=useState("jude");
   const[newPost,setNewPost]=useState("");
   const[postAs,setPostAs]=useState("Mom");
+  const[postEmoji,setPostEmoji]=useState("");
+  const[postImage,setPostImage]=useState("");
+  const[showPostExtras,setShowPostExtras]=useState(false);
   // all posters: parents + kids
   // ALL_POSTERS defined outside component
   const[showAddEv,setShowAddEv]=useState(false);
@@ -590,10 +593,13 @@ function App(){
     var db=window.__db;
     var ref=window.__ref;
     var push=window.__push;
-    if(!newPost.trim())return;
+    if(!newPost.trim()&&!postEmoji&&!postImage)return;
     const poster=ALL_POSTERS.find(p=>p.id===postAs)||ALL_POSTERS[0];
-    push(ref(db,"posts"),{author:poster.name,avatar:poster.avatar,color:poster.color,text:newPost,time:"just now",likes:0,ts:Date.now()});
-    setNewPost("");
+    const postData={author:poster.name,avatar:poster.avatar,color:poster.color,text:newPost,time:"just now",likes:0,ts:Date.now()};
+    if(postEmoji)postData.emoji=postEmoji;
+    if(postImage.trim())postData.image=postImage.trim();
+    push(ref(db,"posts"),postData);
+    setNewPost("");setPostEmoji("");setPostImage("");setShowPostExtras(false);
   };
 
   const toggleLike=(key)=>{
@@ -1146,7 +1152,39 @@ function App(){
                   </button>
                 ))}
               </div>
-              <textarea value={newPost} onChange={e=>setNewPost(e.target.value)} placeholder={"What's on your mind, "+ALL_POSTERS.find(p=>p.id===postAs)?.name+"?"} rows={2} style={{...C.inp,marginBottom:10}}/>
+              <textarea value={newPost} onChange={e=>setNewPost(e.target.value)} placeholder={"What's on your mind, "+ALL_POSTERS.find(p=>p.id===postAs)?.name+"?"} rows={2} style={{...C.inp,marginBottom:8}}/>
+
+              {/* Emoji + image extras toggle */}
+              <div style={{display:"flex",gap:6,marginBottom:8,alignItems:"center"}}>
+                <button onClick={function(){setShowPostExtras(!showPostExtras);}} style={{background:showPostExtras?"#EEF2FF":"#f0ebe4",color:showPostExtras?"#6366F1":"#888",border:showPostExtras?"1px solid #A5B4FC":"1px solid transparent",borderRadius:20,padding:"4px 12px",fontSize:12,cursor:"pointer"}}>
+                  {postEmoji||"😊"} Emoji {postImage?"📷":""}
+                </button>
+                {(postEmoji||postImage)&&<div style={{fontSize:11,color:"#6B7280",fontStyle:"italic"}}>
+                  {postEmoji&&<span>{postEmoji} </span>}{postImage&&<span>📷 photo attached</span>}
+                </div>}
+              </div>
+
+              {showPostExtras&&(
+                <div style={{background:"#F9FAFB",borderRadius:12,padding:12,marginBottom:10,border:"1px solid #E5E7EB"}}>
+                  {/* Emoji picker */}
+                  <div style={{fontSize:11,color:"#6B7280",marginBottom:6,fontWeight:"bold"}}>Pick an emoji</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:10}}>
+                    {["❤️","🎉","😂","🔥","👏","😍","🙏","💪","🌟","😊","🎮","🏆","📚","🥦","🍕","🐶","⚽","🎨","🌈","✨","👑","💌","🤝","🛡️","⚔️"].map(function(e){return(
+                      <button key={e} onClick={function(){setPostEmoji(postEmoji===e?"":e);}}
+                        style={{fontSize:20,background:postEmoji===e?"#EEF2FF":"transparent",border:postEmoji===e?"2px solid #6366F1":"2px solid transparent",borderRadius:8,padding:"2px 4px",cursor:"pointer"}}>
+                        {e}
+                      </button>
+                    );})}
+                  </div>
+                  {/* Image URL */}
+                  <div style={{fontSize:11,color:"#6B7280",marginBottom:4,fontWeight:"bold"}}>📷 Add a photo (paste image link)</div>
+                  <input value={postImage} onChange={function(e){setPostImage(e.target.value);}}
+                    placeholder="Paste a photo URL e.g. from Google Photos, iCloud..."
+                    style={{...C.inp,marginBottom:4,fontSize:12}}/>
+                  <div style={{fontSize:10,color:"#9CA3AF"}}>Share a Google Photos link, iCloud link, or any public image URL</div>
+                </div>
+              )}
+
               <button onClick={handlePost} style={{...C.btn(ALL_POSTERS.find(p=>p.id===postAs)?.color||"#E07A5F"),float:"right"}}>Share</button>
               <div style={{clear:"both"}}/>
             </div>
@@ -1157,7 +1195,14 @@ function App(){
                   <div style={{width:34,height:34,borderRadius:"50%",background:p.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>{p.avatar}</div>
                   <div><div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B"}}>{p.author}</div><div style={{fontSize:10,color:"#bbb"}}>{p.time}</div></div>
                 </div>
-                <div style={{fontSize:14,color:"#374151",lineHeight:1.55}}>{p.text}</div>
+                {p.emoji&&<div style={{fontSize:40,margin:"4px 0 8px"}}>{p.emoji}</div>}
+                {p.text&&<div style={{fontSize:14,color:"#374151",lineHeight:1.55}}>{p.text}</div>}
+                {p.image&&(
+                  <div style={{marginTop:8,borderRadius:12,overflow:"hidden",maxHeight:260}}>
+                    <img src={p.image} alt="post" style={{width:"100%",objectFit:"cover",borderRadius:12,display:"block"}}
+                      onError={function(e){e.target.style.display="none";}}/>
+                  </div>
+                )}
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:8}}>
                   <button onClick={()=>toggleLike(p._key)} style={{background:"none",border:"1px solid #e8ddd4",borderRadius:20,padding:"4px 12px",fontSize:12,cursor:"pointer",color:liked[p._key]?"#E07A5F":"#bbb"}}>
                     {liked[p._key]?"❤️":"🤍"} {p.likes||0}
