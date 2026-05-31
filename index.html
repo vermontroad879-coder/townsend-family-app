@@ -1251,7 +1251,14 @@ function App(){
 
             {redeemed.length>0&&(
               <>
-                <div style={{fontSize:12,color:"#9CA3AF",margin:"16px 0 8px",fontStyle:"italic"}}>Recently claimed</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"16px 0 8px"}}>
+                  <div style={{fontSize:12,color:"#9CA3AF",fontStyle:"italic"}}>Recently claimed</div>
+                  {parentMode&&<button onClick={function(){
+                    var db=window.__db;var ref=window.__ref;var set=window.__set;
+                    set(ref(db,"redeemed"),null);
+                    toast$("Claimed rewards cleared 🗑️");
+                  }} style={{background:"rgba(239,68,68,0.15)",color:"#FCA5A5",border:"1px solid #EF4444",borderRadius:10,padding:"4px 12px",fontSize:11,cursor:"pointer"}}>Clear All</button>}
+                </div>
                 {redeemed.map(function(r,i){return(
                   <div key={r._key||i} style={{...C.card,display:"flex",gap:10,alignItems:"center",borderLeft:"4px solid #10B981"}}>
                     <div style={{fontSize:22}}>{r.icon}</div>
