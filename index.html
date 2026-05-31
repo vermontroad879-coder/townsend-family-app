@@ -395,6 +395,8 @@ function App(){
   };
 
   const openParentMode=()=>{
+    // If turning off parent mode while on parent guide, switch to kids guide
+    if(parentMode&&guideTab==="parents"){setGuideTab("kids");}
     if(parentMode){setParentMode(false);toast$("Parent mode off");return;}
     setPinInput("");setPinError("");setPinModal("enter");
   };
@@ -1213,9 +1215,16 @@ function App(){
               <button onClick={function(){setGuideTab("kids");}} style={{flex:1,background:guideTab==="kids"?"#6366F1":"#F3F4F6",color:guideTab==="kids"?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"9px 0",fontSize:13,cursor:"pointer",fontWeight:guideTab==="kids"?"bold":"normal"}}>
                 Kids Guide
               </button>
+              {parentMode&&(
               <button onClick={function(){setGuideTab("parents");}} style={{flex:1,background:guideTab==="parents"?"#6366F1":"#F3F4F6",color:guideTab==="parents"?"#fff":"#6B7280",border:"none",borderRadius:20,padding:"9px 0",fontSize:13,cursor:"pointer",fontWeight:guideTab==="parents"?"bold":"normal"}}>
                 Parent Guide
               </button>
+              )}
+              {!parentMode&&(
+              <button onClick={openParentMode} style={{flex:1,background:"#F3F4F6",color:"#9CA3AF",border:"1px dashed #D1D5DB",borderRadius:20,padding:"9px 0",fontSize:13,cursor:"pointer"}}>
+                Parent Guide
+              </button>
+              )}
             </div>
 
             {guideTab==="kids"&&(
