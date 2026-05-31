@@ -69,7 +69,7 @@ input:focus,textarea:focus,select:focus{outline:none;}
 <!-- Babel for JSX -->
 <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.10/babel.min.js"></script>
 <script type="text/babel" data-presets="react">
-const{useState,useEffect}=React;
+var useState=React.useState,useEffect=React.useEffect;
 function getCurrentDay(){return["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];}
 function uid(){return Math.random().toString(36).slice(2,9);}
 
@@ -274,7 +274,11 @@ function App(){
 
   useEffect(()=>{
     if(!window.__db)return;
-    const{__db:db,__ref:ref,__onValue:onVal,__push:push,__set:set}=window;
+    var db=window.__db;
+    var ref=window.__ref;
+    var onVal=window.__onValue;
+    var push=window.__push;
+    var set=window.__set;
     let loaded=0;
     // Force loading to complete after 6 seconds no matter what
     const forceLoad=setTimeout(()=>setLoading(false),6000);
@@ -364,7 +368,10 @@ function App(){
 
   const logActivity=(text,icon)=>{
     const ic=icon||"📋";
-    const{__db:db,__ref:ref,__push:push,__set:set}=window;
+    var db=window.__db;
+    var ref=window.__ref;
+    var push=window.__push;
+    var set=window.__set;
     push(ref(db,"activity"),{text,icon:ic,ts:Date.now(),time:"just now"});
     // trim to 15 after push
     ref(db,"activity").once("value",function(s){
@@ -391,13 +398,10 @@ function App(){
   const submitChangePin=()=>{
     if(newPin1.length<4){setPinError("PIN must be at least 4 digits.");return;}
     if(newPin1!==newPin2){setPinError("PINs do not match.");return;}
-    const{__db:db,__ref:ref,__set:set}=window;
+    var db=window.__db;
+    var ref=window.__ref;
+    var set=window.__set;
     set(ref(db,"parentPin"),newPin1);
     setCurrentPin(newPin1);
     setPinModal(null);setNewPin1("");setNewPin2("");setPinError("");
-    toast$("PIN updated! 🔐");
-  };
-
-  const saveChore=()=>{
-    const{__db:db,__ref:ref,__set:set,__push:push}=window;
-    const{label,desc,pts,icon,editKey}=choreFor
+    toast$
