@@ -254,6 +254,7 @@ function App(){
   const[parentTab,setParentTab]=useState("approvals");
   const[editorKid,setEditorKid]=useState("jude");
   const[toast,setToast]=useState(null);
+  const[unlockToast,setUnlockToast]=useState(null); // {kidName,reward} achievement popup
   const[msgModal,setMsgModal]=useState(null);
   const[msgText,setMsgText]=useState("");
   const[msgFrom,setMsgFrom]=useState("jude");
@@ -513,6 +514,19 @@ function App(){
     set(ref(db,"pending/"+pkey),null);
     logActivity("Approved: "+entry.kidAvatar+" "+entry.kidName+"s "+entry.qLabel+" ("+entry.day+") +"+entry.pts+"pt","✅");
     toast$("Approved! +"+entry.pts+"pt for "+entry.kidName);
+    // Check if a new free reward just unlocked
+    setTimeout(function(){
+      const newFp=calcFreePts(entry.kidId,checks,side,dynQuests)+(entry.pts*3);
+      const justUnlocked=FREE_REWARDS.filter(function(r){
+        if(!r.freePts||r.isLegend)return false;
+        const oldFp=newFp-(entry.pts*3);
+        return oldFp<r.freePts && newFp>=r.freePts;
+      });
+      if(justUnlocked.length>0){
+        setUnlockToast({kidName:entry.kidName,kidAvatar:entry.kidAvatar,reward:justUnlocked[0]});
+        setTimeout(function(){setUnlockToast(null);},5000);
+      }
+    },500);
   };
 
   const denyChore=(pkey,entry)=>{
@@ -804,6 +818,23 @@ function App(){
 
       {toast&&<div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",background:"#1E1B4B",color:"#C7D2FE",border:"1px solid #4F46E5",borderRadius:24,padding:"10px 22px",fontSize:13,zIndex:300,boxShadow:"0 8px 32px rgba(79,70,229,0.4)",whiteSpace:"nowrap"}}>{toast}</div>}
 
+      {/* ACHIEVEMENT UNLOCK POPUP */}
+      {unlockToast&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.7)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"linear-gradient(135deg,#1E1B4B,#312E81)",borderRadius:24,padding:28,width:"100%",maxWidth:360,border:"2px solid #818CF8",textAlign:"center",boxShadow:"0 20px 60px rgba(79,70,229,0.5)"}}>
+            <div style={{fontSize:64,marginBottom:8}}>{unlockToast.reward.icon}</div>
+            <div style={{color:"#FDE68A",fontSize:13,fontWeight:"bold",letterSpacing:2,marginBottom:6}}>REWARD UNLOCKED!</div>
+            <div style={{color:"#E0E7FF",fontSize:22,fontWeight:"bold",marginBottom:6}}>{unlockToast.kidAvatar} {unlockToast.kidName}</div>
+            <div style={{color:"#C7D2FE",fontSize:17,fontWeight:"bold",marginBottom:8}}>{unlockToast.reward.label}</div>
+            <div style={{color:"#818CF8",fontSize:13,marginBottom:20}}>{unlockToast.reward.sub}</div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={function(){setUnlockToast(null);}} style={{flex:1,background:"rgba(255,255,255,0.08)",color:"#9CA3AF",border:"none",borderRadius:14,padding:"12px",fontSize:14,cursor:"pointer"}}>Later</button>
+              <button onClick={function(){setUnlockToast(null);redeemReward(unlockToast.reward,KIDS.find(function(k){return k.name===unlockToast.kidName;})||KIDS[0]);}} style={{flex:1,background:"#6366F1",color:"#fff",border:"none",borderRadius:14,padding:"12px",fontSize:14,cursor:"pointer",fontWeight:"bold"}}>Claim Now!</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PIN MODAL */}
       {pinModal==="enter"&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -943,8 +974,51 @@ function App(){
               })}
             </div>
 
+            {/* DAILY REWARDS STRIP */}
+            <div style={{background:"linear-gradient(135deg,#0F0F1A,#1E1B4B)",borderRadius:16,padding:14,marginBottom:14,border:"1px solid #2D2B5A"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <div>
+                  <div style={{color:"#E0E7FF",fontWeight:"bold",fontSize:14}}>Today's Rewards</div>
+                  <div style={{color:"#4B5563",fontSize:11,marginTop:1}}>Complete chores to unlock</div>
+                </div>
+                <button onClick={function(){setScreen("loot");setLootMode("free");}} style={{background:"rgba(99,102,241,0.2)",color:"#818CF8",border:"1px solid #4338CA",borderRadius:12,padding:"5px 12px",fontSize:11,cursor:"pointer"}}>See All</button>
+              </div>
+              {KIDS.map(function(k){
+                const kfp=calcFreePts(k.id,checks,side,dynQuests);
+                const earned=FREE_REWARDS.filter(function(r){return r.freePts&&!r.isLegend&&kfp>=r.freePts;});
+                const nextR=FREE_REWARDS.filter(function(r){return r.freePts&&!r.isLegend&&kfp<r.freePts;}).sort(function(a,b){return a.freePts-b.freePts;})[0];
+                const pct=nextR?Math.min(100,Math.round(kfp/nextR.freePts*100)):100;
+                const choresNeeded=nextR?Math.ceil((nextR.freePts-kfp)/3):0;
+                return(
+                  <div key={k.id} style={{marginBottom:10,background:"rgba(255,255,255,0.04)",borderRadius:12,padding:"10px 12px",borderLeft:"3px solid "+k.color}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                      <div style={{color:k.color,fontWeight:"bold",fontSize:12}}>{k.avatar} {k.name}</div>
+                      <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
+                        {earned.slice(0,4).map(function(r){return(
+                          <button key={r.id} onClick={function(){redeemReward(r,k.id);}} title={"Claim: "+r.label}
+                            style={{fontSize:18,background:"rgba(16,185,129,0.15)",border:"1px solid #10B981",borderRadius:8,padding:"2px 5px",cursor:"pointer"}}>
+                            {r.icon}
+                          </button>
+                        );})}
+                        {earned.length===0&&nextR&&<div style={{fontSize:11,color:"#4B5563",fontStyle:"italic"}}>{choresNeeded} chore{choresNeeded===1?"":"s"} for {nextR.icon}</div>}
+                      </div>
+                    </div>
+                    {nextR&&(
+                      <div>
+                        <div style={{background:"rgba(255,255,255,0.06)",borderRadius:6,height:5}}>
+                          <div style={{background:k.color,height:5,borderRadius:6,width:pct+"%",transition:"width 0.4s"}}/>
+                        </div>
+                        <div style={{fontSize:10,color:"#4B5563",marginTop:3}}>Next: {nextR.icon} {nextR.label} — {choresNeeded} chore{choresNeeded===1?"":"s"} away</div>
+                      </div>
+                    )}
+                    {earned.length>0&&!nextR&&<div style={{fontSize:10,color:"#10B981",marginTop:3}}>All daily rewards unlocked today!</div>}
+                  </div>
+                );
+              })}
+            </div>
+
             {parentMode&&(
-              <div style={{background:"linear-gradient(135deg,#1E1B4B,#312E81)",borderRadius:16,padding:14,marginBottom:14,border:"2px solid #6366F1"}}>
+              <div style={{background:"linear-gradient(135deg,#1E1B4B,#312E81)"",borderRadius:16,padding:14,marginBottom:14,border:"2px solid #6366F1"}}>
                 <div style={{display:"flex",gap:6,marginBottom:12}}>
                   <button onClick={()=>setParentTab("approvals")} style={{background:parentTab==="approvals"?"#6366F1":"rgba(255,255,255,0.08)",color:"#fff",border:"none",borderRadius:12,padding:"6px 12px",fontSize:11,cursor:"pointer"}}>
                     Approvals{Object.keys(pending).length>0&&<span style={{background:"#EF4444",color:"#fff",borderRadius:"50%",padding:"0 4px",fontSize:9,marginLeft:3}}>{Object.keys(pending).length}</span>}
@@ -1269,19 +1343,86 @@ function App(){
                     </div>
                   );})}
                 </div>
+                {/* How rewards work */}
+                <div style={{background:"linear-gradient(135deg,#EEF2FF,#F5F3FF)",borderRadius:16,padding:14,marginBottom:12,border:"1px solid #A5B4FC"}}>
+                  <div style={{fontWeight:"bold",fontSize:13,color:"#4338CA",marginBottom:8}}>How the Rewards System Works</div>
+                  <div style={{fontSize:12,color:"#374151",lineHeight:1.7,marginBottom:8}}>
+                    Every chore you complete earns <strong>1 point</strong>. Those points are worth <strong>3 free points</strong> toward zero-budget rewards. So just doing <strong>1 chore</strong> gives you enough for a snack or screen time reward — you don't have to wait all week!
+                  </div>
+                  <div style={{display:"flex",gap:10,alignItems:"center",background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"10px 12px",marginBottom:8}}>
+                    <div style={{fontSize:22}}>🧮</div>
+                    <div style={{fontSize:12,color:"#374151",lineHeight:1.6}}>
+                      <strong>1 chore = 1 point = 3 free points</strong><br/>
+                      Free rewards reset each week with the weekly reset.<br/>
+                      You can earn and spend rewards <strong>every single day!</strong>
+                    </div>
+                  </div>
+                  <div style={{fontSize:12,color:"#6B7280",lineHeight:1.6}}>
+                    Paid rewards (cash and Amazon) unlock when you hit a percentage of your core chores for the week — even just 30% gets you $5 cash!
+                  </div>
+                </div>
+
+                {/* Free rewards */}
                 <div style={{background:"#fff",borderRadius:16,padding:14,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
-                  <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:10}}>Free Rewards — Earn Daily!</div>
-                  {[["Fave Snack or Treat","1 chore","🍬"],["30 Min Extra Screen Time","1 chore","📱"],["Pick Tonight Movie","2 chores","🎬"],["30 Min Extra Sleep","2 chores","🌙"],["Extra Xbox Session","3 chores","🎮"],["Skip One Chore Next Week","4 chores","🎟️"],["Friend Over or Sleepover","5 chores","👫"]].map(function(r){return(
-                    <div key={r[0]} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderBottom:"1px solid #F3F4F6"}}>
-                      <div style={{fontSize:20}}>{r[2]}</div>
-                      <div style={{flex:1,fontSize:13,color:"#374151"}}>{r[0]}</div>
-                      <div style={{fontSize:12,fontWeight:"bold",color:"#6366F1"}}>{r[1]}</div>
+                  <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:4}}>Zero Budget Rewards — Earn Daily!</div>
+                  <div style={{fontSize:11,color:"#6B7280",marginBottom:10,fontStyle:"italic"}}>1 point from any chore = 3 free points toward these</div>
+                  {[
+                    ["🍬","Fave Snack or Treat","1 chore","#F472B6"],
+                    ["📱","30 Min Extra Screen Time","1 chore","#6366F1"],
+                    ["🎬","Pick Tonight Movie or Show","2 chores","#EC4899"],
+                    ["🌙","30 Min Extra Sleep","2 chores","#8B5CF6"],
+                    ["🎮","Extra Xbox Session","3 chores","#6366F1"],
+                    ["🎟️","Skip One Chore Next Week","4 chores","#10B981"],
+                    ["👫","Friend Over or Sleepover","5 chores","#F59E0B"],
+                  ].map(function(r){return(
+                    <div key={r[1]} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #F3F4F6"}}>
+                      <div style={{fontSize:20,width:28,textAlign:"center"}}>{r[0]}</div>
+                      <div style={{flex:1,fontSize:13,color:"#374151"}}>{r[1]}</div>
+                      <div style={{fontSize:11,fontWeight:"bold",color:r[3],background:r[3]+"18",borderRadius:10,padding:"3px 8px"}}>{r[2]}</div>
                     </div>
                   );})}
                 </div>
-                <div style={{background:"linear-gradient(135deg,#78350F,#92400E)",borderRadius:14,padding:14,border:"2px solid #F59E0B"}}>
-                  <div style={{color:"#FDE68A",fontWeight:"bold",fontSize:14,textAlign:"center",marginBottom:6}}>Grand Prize — Xbox Game or New Movie</div>
-                  <div style={{color:"#FCD34D",fontSize:12,lineHeight:1.6,textAlign:"center"}}>Earn the big prize with a full Legend Week: 100% core chores + brush teeth morning and night + bath or shower every other day + fruit or veg daily + 20 minutes reading every day!</div>
+
+                {/* Paid rewards */}
+                <div style={{background:"#fff",borderRadius:16,padding:14,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
+                  <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:4}}>Paid Rewards</div>
+                  <div style={{fontSize:11,color:"#6B7280",marginBottom:10,fontStyle:"italic"}}>Based on % of your core chores done this week</div>
+                  {[
+                    ["💵","$5 Cash","30% of chores","#F59E0B","Just a few chores!"],
+                    ["📦","Amazon Item up to $10","60% of chores","#10B981","Over halfway there"],
+                  ].map(function(r){return(
+                    <div key={r[1]} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #F3F4F6"}}>
+                      <div style={{fontSize:20,width:28,textAlign:"center"}}>{r[0]}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,color:"#374151"}}>{r[1]}</div>
+                        <div style={{fontSize:11,color:"#9CA3AF"}}>{r[4]}</div>
+                      </div>
+                      <div style={{fontSize:11,fontWeight:"bold",color:r[3],background:r[3]+"18",borderRadius:10,padding:"3px 8px"}}>{r[2]}</div>
+                    </div>
+                  );})}
+                </div>
+
+                {/* Grand prize */}
+                <div style={{background:"linear-gradient(135deg,#78350F,#92400E)",borderRadius:14,padding:14,marginBottom:12,border:"2px solid #F59E0B"}}>
+                  <div style={{color:"#FDE68A",fontWeight:"bold",fontSize:14,textAlign:"center",marginBottom:8}}>Grand Prize — Xbox Game or New Release Movie</div>
+                  <div style={{color:"#FCD34D",fontSize:12,lineHeight:1.65,marginBottom:10}}>
+                    Earn the big one with a full <strong>Legend Week</strong> — all of the following every single day:
+                  </div>
+                  {[
+                    ["✅","100% of your core chores completed"],
+                    ["🪥","Brush teeth morning AND night"],
+                    ["🚿","Bath or shower at least every other day"],
+                    ["🥦","1 full serving of fruit or vegetables"],
+                    ["📚","20 minutes of reading"],
+                  ].map(function(r){return(
+                    <div key={r[1]} style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
+                      <div style={{fontSize:16,width:24,textAlign:"center"}}>{r[0]}</div>
+                      <div style={{fontSize:12,color:"#FEF3C7"}}>{r[1]}</div>
+                    </div>
+                  );})}
+                  <div style={{fontSize:11,color:"#FDE68A",marginTop:8,padding:"8px",background:"rgba(0,0,0,0.3)",borderRadius:8,textAlign:"center"}}>
+                    Do all of this every day for a full week and the Grand Prize is yours!
+                  </div>
                 </div>
               </div>
             )}
@@ -1315,7 +1456,7 @@ function App(){
                 );})}
                 <div style={{background:"#fff",borderRadius:16,padding:14,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
                   <div style={{fontWeight:"bold",fontSize:13,color:"#1E1B4B",marginBottom:10}}>Points Reference</div>
-                  {[["Core chores","1 pt each"],["Golden Rules","0.5 pt each per day"],["Fruit, veg or no-mess","0.5 pt per day"],["Side quests","1 to 1.5 pts each"],["Free reward pts","raw pts x 3 (1 chore = 3 free pts)"],["Paid rewards unlock at","30%, 60%, or full Legend Week"]].map(function(r){return(
+                  {[["Core chores","1 pt each"],["Golden Rules","0.5 pt each per day"],["Fruit, veg or no-mess","0.5 pt per day"],["Side quests","1 to 1.5 pts each"],["Free reward pts","pts x 3 (1 chore = 3 free pts)"],["Snack or screen time","1 chore (3 free pts)"],["Movie pick or sleep in","2 chores (6 free pts)"],["Extra Xbox session","3 chores (9 free pts)"],["$5 Cash (paid)","30% core chores"],["Amazon up to $10 (paid)","60% core chores"],["Grand Prize (paid)","Full Legend Week"]].map(function(r){return(
                     <div key={r[0]} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #F3F4F6",fontSize:12}}>
                       <span style={{color:"#374151"}}>{r[0]}</span>
                       <span style={{color:"#6366F1",fontWeight:"bold"}}>{r[1]}</span>
