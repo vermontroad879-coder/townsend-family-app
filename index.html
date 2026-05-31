@@ -395,6 +395,8 @@ function App(){
     setPinModal(null);setNewPin1("");setNewPin2("");setPinError("");
     toast$("PIN updated! 🔐");
   };
+
+  const saveChore=()=>{
     const{__db:db,__ref:ref,__set:set,__push:push}=window;
     const{label,desc,pts,icon,editKey}=choreForm;
     if(!label.trim()){toast$("Please enter a chore name");return;}
