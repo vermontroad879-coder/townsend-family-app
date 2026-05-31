@@ -263,7 +263,8 @@ function App(){
   // all posters: parents + kids
   // ALL_POSTERS defined outside component
   const[showAddEv,setShowAddEv]=useState(false);
-  const[newEv,setNewEv]=useState({title:"",date:"",day:"",who:""});
+  const[editEvKey,setEditEvKey]=useState(null);
+  const[newEv,setNewEv]=useState({title:"",date:"",day:"",who:"",color:"#6366F1"});
   const[liked,setLiked]=useState({});
   const[guideTab,setGuideTab]=useState("kids");
   const BF={label:"",desc:"",pts:"1",icon:"🛏️",editKey:null};
@@ -1282,15 +1283,38 @@ function App(){
           <div style={{padding:16}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div style={{fontSize:13,color:"#6B7280",fontStyle:"italic"}}>Upcoming events</div>
-              {parentMode&&<button onClick={()=>setShowAddEv(!showAddEv)} style={C.btn("#6366F1")}>Add Event</button>}
+              {parentMode&&<button onClick={()=>{setShowAddEv(!showAddEv);setEditEvKey(null);setNewEv({title:"",date:"",day:"",who:"",color:"#6366F1"});}} style={C.btn("#6366F1")}>+ Add Event</button>}
             </div>
             {showAddEv&&(
-              <div style={{...C.card,marginBottom:16}}>
-                <div style={{fontSize:14,fontWeight:"bold",marginBottom:10,color:"#1E1B4B"}}>New Event</div>
+              <div style={{...C.card,marginBottom:16,border:"2px solid #6366F1"}}>
+                <div style={{fontSize:14,fontWeight:"bold",marginBottom:10,color:"#1E1B4B"}}>{editEvKey?"✏️ Edit Event":"New Event"}</div>
                 {[["title","e.g. Doctor appt"],["date","e.g. Jun 15"],["day","e.g. Mon"],["who","e.g. Mom + Dad"]].map(([k,ph])=>(
-                  <input key={k} value={newEv[k]} onChange={e=>setNewEv({...newEv,[k]:e.target.value})} placeholder={ph} style={C.inp}/>
+                  <input key={k} value={newEv[k]||""} onChange={e=>setNewEv({...newEv,[k]:e.target.value})} placeholder={ph} style={C.inp}/>
                 ))}
-                <button onClick={addEvent} style={{...C.btn("#6366F1"),width:"100%",borderRadius:10,padding:"10px"}}>Save</button>
+                <div style={{display:"flex",gap:8,marginBottom:8}}>
+                  <div style={{fontSize:12,color:"#6B7280",marginBottom:4,alignSelf:"center"}}>Color:</div>
+                  {["#6366F1","#10B981","#F59E0B","#EC4899","#E07A5F","#3D405B"].map(c=>(
+                    <button key={c} onClick={()=>setNewEv({...newEv,color:c})}
+                      style={{width:24,height:24,borderRadius:"50%",background:c,border:(newEv.color||"#6366F1")===c?"3px solid #1E1B4B":"2px solid transparent",cursor:"pointer"}}/>
+                  ))}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{
+                    var db=window.__db;var ref=window.__ref;var set=window.__set;var push=window.__push;
+                    if(!newEv.title||!newEv.date)return;
+                    if(editEvKey){
+                      set(ref(db,"events/"+editEvKey),{...newEv,ts:Date.now()});
+                      toast$("Event updated!");
+                    } else {
+                      push(ref(db,"events"),{...newEv,color:newEv.color||"#6366F1",ts:Date.now()});
+                      toast$("Event added!");
+                    }
+                    setNewEv({title:"",date:"",day:"",who:"",color:"#6366F1"});
+                    setShowAddEv(false);setEditEvKey(null);
+                  }} style={{...C.btn("#6366F1"),flex:1,borderRadius:10,padding:"10px"}}>{editEvKey?"Save Changes":"Save Event"}</button>
+                  <button onClick={()=>{setShowAddEv(false);setEditEvKey(null);setNewEv({title:"",date:"",day:"",who:"",color:"#6366F1"});}}
+                    style={{background:"#F3F4F6",color:"#6B7280",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,cursor:"pointer"}}>Cancel</button>
+                </div>
               </div>
             )}
             {events.map(ev=>(
@@ -1299,10 +1323,25 @@ function App(){
                   <div style={{fontSize:10,opacity:0.85}}>{ev.day}</div>
                   <div style={{fontSize:15,fontWeight:"bold"}}>{(ev.date||"").split(" ")[1]}</div>
                 </div>
-                <div>
+                <div style={{flex:1}}>
                   <div style={{fontWeight:"bold",fontSize:15,color:"#1E1B4B"}}>{ev.title}</div>
                   <div style={{fontSize:12,color:"#9CA3AF",marginTop:2}}>{ev.who}</div>
+                  <div style={{fontSize:11,color:"#9CA3AF"}}>{ev.date}</div>
                 </div>
+                {parentMode&&(
+                  <div style={{display:"flex",gap:6,flexShrink:0}}>
+                    <button onClick={()=>{
+                      setEditEvKey(ev._key||ev.id);
+                      setNewEv({title:ev.title||"",date:ev.date||"",day:ev.day||"",who:ev.who||"",color:ev.color||"#6366F1"});
+                      setShowAddEv(true);
+                    }} style={{background:"rgba(99,102,241,0.15)",color:"#818CF8",border:"1px solid #6366F1",borderRadius:8,padding:"5px 10px",fontSize:12,cursor:"pointer"}}>✏️</button>
+                    <button onClick={()=>{
+                      var db=window.__db;var ref=window.__ref;var set=window.__set;
+                      set(ref(db,"events/"+(ev._key||ev.id)),null);
+                      toast$("Event deleted");
+                    }} style={{background:"rgba(239,68,68,0.15)",color:"#FCA5A5",border:"1px solid #EF4444",borderRadius:8,padding:"5px 10px",fontSize:12,cursor:"pointer"}}>🗑️</button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
